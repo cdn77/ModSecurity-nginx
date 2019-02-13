@@ -116,7 +116,7 @@ typedef struct {
     /* RulesSet or Rules */
     void                      *rules_set;
 
-    ngx_flag_t                 enable;
+    ngx_http_complex_value_t  *enable;
 #if defined(MODSECURITY_SANITY_CHECKS) && (MODSECURITY_SANITY_CHECKS)
     ngx_flag_t                 sanity_checks_enabled;
 #endif
