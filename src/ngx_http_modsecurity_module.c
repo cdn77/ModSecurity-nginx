@@ -26,7 +26,9 @@
 
 static ngx_int_t ngx_http_modsecurity_init(ngx_conf_t *cf);
 static void *ngx_http_modsecurity_create_main_conf(ngx_conf_t *cf);
+#if (NGX_DEBUG)
 static char *ngx_http_modsecurity_init_main_conf(ngx_conf_t *cf, void *conf);
+#endif
 static void *ngx_http_modsecurity_create_conf(ngx_conf_t *cf);
 static char *ngx_http_modsecurity_merge_conf(ngx_conf_t *cf, void *parent, void *child);
 static void ngx_http_modsecurity_cleanup_instance(void *data);
@@ -496,7 +498,11 @@ static ngx_http_module_t ngx_http_modsecurity_ctx = {
     ngx_http_modsecurity_init,             /* postconfiguration */
 
     ngx_http_modsecurity_create_main_conf, /* create main configuration */
+#if (NGX_DEBUG)
     ngx_http_modsecurity_init_main_conf,   /* init main configuration */
+#else
+    NULL,                                  /* init main configuration */
+#endif
 
     NULL,                                  /* create server configuration */
     NULL,                                  /* merge server configuration */
@@ -650,21 +656,21 @@ ngx_http_modsecurity_create_main_conf(ngx_conf_t *cf)
     return conf;
 }
 
-
+#if (NGX_DEBUG)
 static char *
 ngx_http_modsecurity_init_main_conf(ngx_conf_t *cf, void *conf)
 {
     ngx_http_modsecurity_main_conf_t  *mmcf;
     mmcf = (ngx_http_modsecurity_main_conf_t *) conf;
 
-    ngx_log_error(NGX_LOG_NOTICE, cf->log, 0,
+    ngx_log_debug4(NGX_LOG_DEBUG, cf->log, 0,
                   "%s (rules loaded inline/local/remote: %ui/%ui/%ui)",
                   MODSECURITY_NGINX_WHOAMI, mmcf->rules_inline,
                   mmcf->rules_file, mmcf->rules_remote);
 
     return NGX_CONF_OK;
 }
-
+#endif
 
 static void *
 ngx_http_modsecurity_create_conf(ngx_conf_t *cf)
