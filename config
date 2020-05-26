@@ -8,7 +8,7 @@
 # $YAJL_LIB variable may need to be populated in case of non-standard
 # path of libyajl.so's installation
 
-ngx_feature_name=
+ngx_feature_name=NGX_MODSECURITY_MODULE
 ngx_feature_run=no
 ngx_feature_incs="#include <modsecurity/modsecurity.h>"
 ngx_feature_libs="-lmodsecurity"
