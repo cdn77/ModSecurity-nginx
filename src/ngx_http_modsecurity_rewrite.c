@@ -23,8 +23,6 @@
 ngx_int_t
 ngx_http_modsecurity_rewrite_handler(ngx_http_request_t *r)
 {
-    ngx_pool_t                   *old_pool;
-    ngx_http_modsecurity_ctx_t   *ctx;
     ngx_http_modsecurity_conf_t  *mcf;
 
     mcf = ngx_http_get_module_loc_conf(r, ngx_http_modsecurity_module);
@@ -32,6 +30,16 @@ ngx_http_modsecurity_rewrite_handler(ngx_http_request_t *r)
         dd("ModSecurity not enabled... returning");
         return NGX_DECLINED;
     }
+
+    return ngx_http_modsecurity_rewrite_handler_internal(r);
+}
+
+
+ngx_int_t
+ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *r)
+{
+    ngx_pool_t                   *old_pool;
+    ngx_http_modsecurity_ctx_t   *ctx;
 
     /*
     if (r->method != NGX_HTTP_GET &&
@@ -47,6 +55,11 @@ ngx_http_modsecurity_rewrite_handler(ngx_http_request_t *r)
     ctx = ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
 
     dd("recovering ctx: %p", ctx);
+
+    if (ctx != NULL) {
+        dd("already processed before");
+        return NGX_DECLINED;
+    }
 
     if (ctx == NULL)
     {

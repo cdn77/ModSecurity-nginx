@@ -169,6 +169,7 @@ ngx_int_t ngx_http_modsecurity_pre_access_handler(ngx_http_request_t *r);
 
 /* ngx_http_modsecurity_rewrite.c */
 ngx_int_t ngx_http_modsecurity_rewrite_handler(ngx_http_request_t *r);
+ngx_int_t ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *);
 
 
 #endif /* _NGX_HTTP_MODSECURITY_COMMON_H_INCLUDED_ */

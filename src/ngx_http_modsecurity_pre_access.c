@@ -200,6 +200,7 @@ ngx_http_modsecurity_pre_access_handler(ngx_http_request_t *r)
 
     dd("Nothing to add on the body inspection, reclaiming a NGX_DECLINED");
 #endif
+    r->write_event_handler = ngx_http_request_empty_handler;
     return NGX_DECLINED;
 }
 
