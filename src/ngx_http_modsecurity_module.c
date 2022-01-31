@@ -238,19 +238,9 @@ ngx_http_modsecurity_process_intervention (Transaction *transaction, ngx_http_re
 static void
 ngx_http_modsecurity_cleanup(void *data)
 {
-    ngx_http_modsecurity_ctx_t *ctx;
-
-    ctx = (ngx_http_modsecurity_ctx_t *) data;
+    ngx_http_modsecurity_ctx_t *ctx = data;
 
     msc_transaction_cleanup(ctx->modsec_transaction);
-
-#if defined(MODSECURITY_SANITY_CHECKS) && (MODSECURITY_SANITY_CHECKS)
-    /*
-     * Purge stored context headers.  Memory allocated for individual stored header
-     * name/value pair will be freed automatically when r->pool is destroyed.
-     */
-    ngx_array_destroy(ctx->sanity_headers_out);
-#endif
 }
 
 
