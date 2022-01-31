@@ -262,9 +262,7 @@ ngx_http_modsecurity_create_ctx(ngx_http_request_t *r, ModSecurity *modsec,
     ngx_http_modsecurity_ctx_t  *ctx;
 
     ctx = ngx_pcalloc(r->pool, sizeof(ngx_http_modsecurity_ctx_t));
-    if (ctx == NULL)
-    {
-        dd("failed to allocate memory for the context.");
+    if (ctx == NULL) {
         return NULL;
     }
 
@@ -273,7 +271,6 @@ ngx_http_modsecurity_create_ctx(ngx_http_request_t *r, ModSecurity *modsec,
             msc_new_transaction_with_id(modsec, rules,
                                         (char *) transaction_id->data,
                                         r->connection->log);
-
     } else {
         ctx->modsec_transaction =
             msc_new_transaction(modsec, rules, r->connection->log);
@@ -281,23 +278,21 @@ ngx_http_modsecurity_create_ctx(ngx_http_request_t *r, ModSecurity *modsec,
 
     dd("transaction created");
 
-    ngx_http_set_ctx(r, ctx, ngx_http_modsecurity_module);
+#if defined(MODSECURITY_SANITY_CHECKS) && (MODSECURITY_SANITY_CHECKS)
+    ctx->sanity_headers_out = ngx_array_create(r->pool, 12, sizeof(ngx_http_modsecurity_header_t));
+    if (ctx->sanity_headers_out == NULL) {
+        return NULL;
+    }
+#endif
 
     cln = ngx_pool_cleanup_add(r->pool, sizeof(ngx_http_modsecurity_ctx_t));
-    if (cln == NULL)
-    {
-        dd("failed to create the ModSecurity context cleanup");
-        return NGX_CONF_ERROR;
+    if (cln == NULL) {
+        return NULL;
     }
     cln->handler = ngx_http_modsecurity_cleanup;
     cln->data = ctx;
 
-#if defined(MODSECURITY_SANITY_CHECKS) && (MODSECURITY_SANITY_CHECKS)
-    ctx->sanity_headers_out = ngx_array_create(r->pool, 12, sizeof(ngx_http_modsecurity_header_t));
-    if (ctx->sanity_headers_out == NULL) {
-        return NGX_CONF_ERROR;
-    }
-#endif
+    ngx_http_set_ctx(r, ctx, ngx_http_modsecurity_module);
 
     return ctx;
 }
