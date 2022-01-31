@@ -118,10 +118,13 @@ ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *r)
 static ngx_int_t
 ngx_http_modsecurity_process_connection(ngx_http_request_t *r)
 {
+    in_port_t                    client_port, server_port;
     ngx_int_t                    rc;
+    ngx_str_t                    client_addr, server_addr;
     ngx_pool_t                  *old_pool;
     ngx_connection_t            *c;
     ngx_http_modsecurity_ctx_t  *ctx;
+    u_char                       addr[NGX_SOCKADDR_STRLEN + 1];
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
     if (ctx == NULL) {
@@ -129,45 +132,31 @@ ngx_http_modsecurity_process_connection(ngx_http_request_t *r)
     }
 
     c = r->connection;
-    /**
-     * FIXME: We may want to use struct sockaddr instead of addr_text.
-     *
-     */
-    ngx_str_t addr_text = c->addr_text;
 
-    /**
-     * FIXME: Check if it is possible to hook on nginx on a earlier phase.
-     *
-     * At this point we are doing an late connection process. Maybe
-     * we have to hook into NGX_HTTP_FIND_CONFIG_PHASE, it seems to be the
-     * erliest phase that nginx allow us to attach those kind of hooks.
-     *
-     */
-    int client_port = ngx_inet_get_port(c->sockaddr);
-    int server_port = ngx_inet_get_port(c->local_sockaddr);
+    client_addr = c->addr_text;
+    client_port = ngx_inet_get_port(c->sockaddr);
 
-    const char *client_addr = ngx_str_to_char(addr_text, r->pool);
-    if (client_addr == (char*)-1) {
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    if (client_addr.len < c->listening->addr_text_max_len) {
+        client_addr.data[client_addr.len] = 0;
+    } else {
+        client_addr.data = (u_char *)ngx_str_to_char(client_addr, r->pool);
     }
 
-    ngx_str_t s;
-    u_char addr[NGX_SOCKADDR_STRLEN];
-    s.len = NGX_SOCKADDR_STRLEN;
-    s.data = addr;
-    if (ngx_connection_local_sockaddr(c, &s, 0) != NGX_OK) {
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
+    // fill c->local_sockaddr
+    ngx_connection_local_sockaddr(c, NULL, 0);
 
-    const char *server_addr = ngx_str_to_char(s, r->pool);
-    if (server_addr == (char*)-1) {
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
+    server_addr.data = addr;
+    server_addr.len = NGX_SOCKADDR_STRLEN;
+
+    server_addr.len = ngx_sock_ntop(c->local_sockaddr, c->local_socklen,
+                                    server_addr.data, server_addr.len, 0);
+    server_addr.data[server_addr.len] = 0;
+    server_port = ngx_inet_get_port(c->local_sockaddr);
 
     old_pool = ngx_http_modsecurity_pcre_malloc_init(r->pool);
     rc = msc_process_connection(ctx->modsec_transaction,
-        client_addr, client_port,
-        server_addr, server_port);
+                                (char *)client_addr.data, client_port,
+                                (char *)server_addr.data, server_port);
     ngx_http_modsecurity_pcre_malloc_done(old_pool);
     if (rc != 1){
         dd("Was not able to extract connection information.");
