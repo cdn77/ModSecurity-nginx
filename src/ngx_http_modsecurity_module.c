@@ -293,12 +293,11 @@ ngx_conf_set_rules(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ngx_http_modsecurity_conf_t *mcf = conf;
 
-    int                                rc;
-    ngx_str_t                         *value;
-    const char                        *error;
-    ngx_pool_t                        *old_pool;
-    ngx_pool_cleanup_t                *cln;
-    ngx_http_modsecurity_main_conf_t  *mmcf;
+    int                  rc;
+    ngx_str_t           *value;
+    const char          *error;
+    ngx_pool_t          *old_pool;
+    ngx_pool_cleanup_t  *cln;
 
     value = cf->args->elts;
 
@@ -325,9 +324,6 @@ ngx_conf_set_rules(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return NGX_CONF_ERROR;
     }
 
-    mmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_modsecurity_module);
-    mmcf->rules_inline += rc;
-
     return NGX_CONF_OK;
 }
 
@@ -337,12 +333,11 @@ ngx_conf_set_rules_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ngx_http_modsecurity_conf_t *mcf = conf;
 
-    int                                rc;
-    ngx_str_t                         *value;
-    const char                        *error;
-    ngx_pool_t                        *old_pool;
-    ngx_pool_cleanup_t                *cln;
-    ngx_http_modsecurity_main_conf_t  *mmcf;
+    int                  rc;
+    ngx_str_t           *value;
+    const char          *error;
+    ngx_pool_t          *old_pool;
+    ngx_pool_cleanup_t  *cln;
 
     value = cf->args->elts;
 
@@ -369,9 +364,6 @@ ngx_conf_set_rules_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         return NGX_CONF_ERROR;
     }
 
-    mmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_modsecurity_module);
-    mmcf->rules_file += rc;
-
     return NGX_CONF_OK;
 }
 
@@ -381,12 +373,11 @@ ngx_conf_set_rules_remote(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ngx_http_modsecurity_conf_t *mcf = conf;
 
-    int                                rc;
-    ngx_str_t                         *value;
-    const char                        *error;
-    ngx_pool_t                        *old_pool;
-    ngx_pool_cleanup_t                *cln;
-    ngx_http_modsecurity_main_conf_t  *mmcf;
+    int                  rc;
+    ngx_str_t           *value;
+    const char          *error;
+    ngx_pool_t          *old_pool;
+    ngx_pool_cleanup_t  *cln;
 
     value = cf->args->elts;
 
@@ -414,9 +405,6 @@ ngx_conf_set_rules_remote(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
                            value[1], value[2], error);
         return NGX_CONF_ERROR;
     }
-
-    mmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_modsecurity_module);
-    mmcf->rules_remote += rc;
 
     return NGX_CONF_OK;
 }
@@ -578,9 +566,6 @@ ngx_http_modsecurity_create_main_conf(ngx_conf_t *cf)
      *
      *     conf->modsec = NULL;
      *     conf->pool = NULL;
-     *     conf->rules_inline = 0;
-     *     conf->rules_file = 0;
-     *     conf->rules_remote = 0;
      */
 
     return conf;
@@ -614,11 +599,6 @@ ngx_http_modsecurity_init_main_conf(ngx_conf_t *cf, void *conf)
     /* Provide our connector information to LibModSecurity */
     msc_set_connector_info(mmcf->modsec, MODSECURITY_NGINX_WHOAMI);
     msc_set_log_cb(mmcf->modsec, ngx_http_modsecurity_log);
-
-    ngx_log_debug4(NGX_LOG_DEBUG, cf->log, 0,
-                   "%s (rules loaded inline/local/remote: %ui/%ui/%ui)",
-                   MODSECURITY_NGINX_WHOAMI, mmcf->rules_inline,
-                   mmcf->rules_file, mmcf->rules_remote);
 
     return NGX_CONF_OK;
 }
