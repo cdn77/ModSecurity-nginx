@@ -399,13 +399,11 @@ ngx_http_modsecurity_resolv_header_vary(ngx_http_request_t *r, ngx_str_t name, o
     return 1;
 }
 
-ngx_int_t
+void
 ngx_http_modsecurity_header_filter_init(void)
 {
     ngx_http_next_header_filter = ngx_http_top_header_filter;
     ngx_http_top_header_filter = ngx_http_modsecurity_header_filter;
-
-    return NGX_OK;
 }
 
 

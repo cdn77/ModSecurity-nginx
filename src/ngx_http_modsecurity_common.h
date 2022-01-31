@@ -137,7 +137,9 @@ extern ngx_module_t ngx_http_modsecurity_module;
 
 /* ngx_http_modsecurity_module.c */
 int ngx_http_modsecurity_process_intervention (Transaction *transaction, ngx_http_request_t *r, ngx_int_t early_log);
-ngx_http_modsecurity_ctx_t *ngx_http_modsecurity_create_ctx(ngx_http_request_t *r);
+ngx_http_modsecurity_ctx_t *ngx_http_modsecurity_create_ctx(
+        ngx_http_request_t *r, ModSecurity *modsec, void *rules,
+        ngx_str_t *transaction_id);
 char *ngx_str_to_char(ngx_str_t a, ngx_pool_t *p);
 #if (NGX_PCRE2)
 #define ngx_http_modsecurity_pcre_malloc_init(x) NULL
@@ -148,11 +150,11 @@ void ngx_http_modsecurity_pcre_malloc_done(ngx_pool_t *old_pool);
 #endif
 
 /* ngx_http_modsecurity_body_filter.c */
-ngx_int_t ngx_http_modsecurity_body_filter_init(void);
+void ngx_http_modsecurity_body_filter_init(void);
 ngx_int_t ngx_http_modsecurity_body_filter(ngx_http_request_t *r, ngx_chain_t *in);
 
 /* ngx_http_modsecurity_header_filter.c */
-ngx_int_t ngx_http_modsecurity_header_filter_init(void);
+void ngx_http_modsecurity_header_filter_init(void);
 #if defined(MODSECURITY_SANITY_CHECKS) && (MODSECURITY_SANITY_CHECKS)
 int ngx_http_modsecurity_store_ctx_header(ngx_http_request_t *r, ngx_str_t *name, ngx_str_t *value);
 #endif

@@ -23,13 +23,11 @@
 static ngx_http_output_body_filter_pt ngx_http_next_body_filter;
 
 /* XXX: check behaviour on few body filters installed */
-ngx_int_t
+void
 ngx_http_modsecurity_body_filter_init(void)
 {
     ngx_http_next_body_filter = ngx_http_top_body_filter;
     ngx_http_top_body_filter = ngx_http_modsecurity_body_filter;
-
-    return NGX_OK;
 }
 
 ngx_int_t

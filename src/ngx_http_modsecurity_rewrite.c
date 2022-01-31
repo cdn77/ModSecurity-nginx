@@ -20,13 +20,20 @@
 
 #include "ngx_http_modsecurity_common.h"
 
+
+static ngx_int_t ngx_http_modsecurity_process_req_header(ngx_http_request_t *r);
+static ngx_int_t ngx_http_modsecurity_process_url(ngx_http_request_t *r);
+static ngx_int_t ngx_http_modsecurity_process_connection(ngx_http_request_t *r);
+
+
 ngx_int_t
 ngx_http_modsecurity_rewrite_handler(ngx_http_request_t *r)
 {
     ngx_http_modsecurity_conf_t  *mcf;
 
     mcf = ngx_http_get_module_loc_conf(r, ngx_http_modsecurity_module);
-    if (mcf == NULL || mcf->enable != 1) {
+
+    if (!mcf->enable) {
         dd("ModSecurity not enabled... returning");
         return NGX_DECLINED;
     }
@@ -38,10 +45,11 @@ ngx_http_modsecurity_rewrite_handler(ngx_http_request_t *r)
 ngx_int_t
 ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *r)
 {
-    ngx_int_t                    rc;
-    ngx_pool_t                  *old_pool;
-    ngx_connection_t            *c;
-    ngx_http_modsecurity_ctx_t  *ctx;
+    ngx_int_t                          rc;
+    ngx_str_t                          tid;
+    ngx_http_modsecurity_ctx_t        *ctx;
+    ngx_http_modsecurity_conf_t       *mcf;
+    ngx_http_modsecurity_main_conf_t  *mmcf;
 
     /*
     if (r->method != NGX_HTTP_GET &&
@@ -52,15 +60,72 @@ ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *r)
     }
     */
 
-    dd("catching a new _rewrite_ phase handler");
-
     ctx = ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
-
-    dd("recovering ctx: %p", ctx);
-
     if (ctx != NULL) {
         dd("already processed before");
         return NGX_DECLINED;
+    }
+
+    mmcf = ngx_http_get_module_main_conf(r, ngx_http_modsecurity_module);
+    mcf = ngx_http_get_module_loc_conf(r, ngx_http_modsecurity_module);
+
+    if (mcf->rules_set == NULL) {
+        // no rules, nothing to do
+        return NGX_DECLINED;
+    }
+
+    ngx_str_null(&tid);
+    if (mcf->transaction_id) {
+        if (ngx_http_complex_value(r, mcf->transaction_id, &tid) != NGX_OK) {
+            return NGX_ERROR;
+        }
+    }
+
+    ctx = ngx_http_modsecurity_create_ctx(r, mmcf->modsec, mcf->rules_set, &tid);
+
+    dd("ctx was NULL, creating new context: %p", ctx);
+
+    if (ctx == NULL) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+
+    rc = ngx_http_modsecurity_process_connection(r);
+    if (rc > 0) {
+        ctx->intervention_triggered = 1;
+        return rc;
+    }
+
+    rc = ngx_http_modsecurity_process_url(r);
+    if (rc > 0) {
+        ctx->intervention_triggered = 1;
+        return rc;
+    }
+
+    rc = ngx_http_modsecurity_process_req_header(r);
+
+    if (r->error_page) {
+        return NGX_DECLINED;
+    }
+    if (rc > 0) {
+        ctx->intervention_triggered = 1;
+        return rc;
+    }
+
+    return NGX_DECLINED;
+}
+
+
+static ngx_int_t
+ngx_http_modsecurity_process_connection(ngx_http_request_t *r)
+{
+    ngx_int_t                    rc;
+    ngx_pool_t                  *old_pool;
+    ngx_connection_t            *c;
+    ngx_http_modsecurity_ctx_t  *ctx;
+
+    ctx = ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
+    if (ctx == NULL) {
+        return NGX_ERROR;
     }
 
     c = r->connection;
@@ -69,15 +134,6 @@ ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *r)
      *
      */
     ngx_str_t addr_text = c->addr_text;
-
-    ctx = ngx_http_modsecurity_create_ctx(r);
-
-    dd("ctx was NULL, creating new context: %p", ctx);
-
-    if (ctx == NULL) {
-        dd("ctx still null; Nothing we can do, returning an error.");
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
 
     /**
      * FIXME: Check if it is possible to hook on nginx on a earlier phase.
@@ -126,13 +182,22 @@ ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *r)
      *
      */
     dd("Processing intervention with the connection information filled in");
-    rc = ngx_http_modsecurity_process_intervention(ctx->modsec_transaction, r, 1);
-    if (rc > 0) {
-        ctx->intervention_triggered = 1;
-        return rc;
+    return ngx_http_modsecurity_process_intervention(ctx->modsec_transaction, r, 1);
+}
+
+
+static ngx_int_t
+ngx_http_modsecurity_process_url(ngx_http_request_t *r)
+{
+    ngx_pool_t                  *old_pool;
+    const char                  *http_version, *n_uri, *n_method;
+    ngx_http_modsecurity_ctx_t  *ctx;
+
+    ctx = ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
+    if (ctx == NULL) {
+        return NGX_ERROR;
     }
 
-    const char *http_version;
     switch (r->http_version) {
         case NGX_HTTP_VERSION_9 :
             http_version = "0.9";
@@ -159,8 +224,8 @@ ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *r)
             break;
     }
 
-    const char *n_uri = ngx_str_to_char(r->unparsed_uri, r->pool);
-    const char *n_method = ngx_str_to_char(r->method_name, r->pool);
+    n_uri = ngx_str_to_char(r->unparsed_uri, r->pool);
+    n_method = ngx_str_to_char(r->method_name, r->pool);
     if (n_uri == (char*)-1 || n_method == (char*)-1) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
@@ -173,10 +238,19 @@ ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *r)
     ngx_http_modsecurity_pcre_malloc_done(old_pool);
 
     dd("Processing intervention with the transaction information filled in (uri, method and version)");
-    rc = ngx_http_modsecurity_process_intervention(ctx->modsec_transaction, r, 1);
-    if (rc > 0) {
-        ctx->intervention_triggered = 1;
-        return rc;
+    return ngx_http_modsecurity_process_intervention(ctx->modsec_transaction, r, 1);
+}
+
+
+static ngx_int_t
+ngx_http_modsecurity_process_req_header(ngx_http_request_t *r)
+{
+    ngx_pool_t                  *old_pool;
+    ngx_http_modsecurity_ctx_t  *ctx;
+
+    ctx = ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
+    if (ctx == NULL) {
+        return NGX_ERROR;
     }
 
     /**
@@ -222,14 +296,6 @@ ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *r)
     msc_process_request_headers(ctx->modsec_transaction);
     ngx_http_modsecurity_pcre_malloc_done(old_pool);
     dd("Processing intervention with the request headers information filled in");
-    rc = ngx_http_modsecurity_process_intervention(ctx->modsec_transaction, r, 1);
-    if (r->error_page) {
-        return NGX_DECLINED;
-        }
-    if (rc > 0) {
-        ctx->intervention_triggered = 1;
-        return rc;
-    }
 
-    return NGX_DECLINED;
+    return ngx_http_modsecurity_process_intervention(ctx->modsec_transaction, r, 1);
 }
