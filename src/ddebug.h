@@ -67,34 +67,6 @@ static void dd(const char *fmt, ...) {
 
 #endif
 
-#if defined(MODSECURITY_DDEBUG) && (MODSECURITY_DDEBUG)
-
-#define dd_check_read_event_handler(r)   \
-    dd("r->read_event_handler = %s", \
-        r->read_event_handler == ngx_http_block_reading ? \
-            "ngx_http_block_reading" : \
-        r->read_event_handler == ngx_http_test_reading ? \
-            "ngx_http_test_reading" : \
-        r->read_event_handler == ngx_http_request_empty_handler ? \
-            "ngx_http_request_empty_handler" : "UNKNOWN")
-
-#define dd_check_write_event_handler(r)   \
-    dd("r->write_event_handler = %s", \
-        r->write_event_handler == ngx_http_handler ? \
-            "ngx_http_handler" : \
-        r->write_event_handler == ngx_http_core_run_phases ? \
-            "ngx_http_core_run_phases" : \
-        r->write_event_handler == ngx_http_request_empty_handler ? \
-            "ngx_http_request_empty_handler" : "UNKNOWN")
-
-#else
-
-#define dd_check_read_event_handler(r)
-#define dd_check_write_event_handler(r)
-
-#endif
-
-
 #endif /* _DDEBUG_H_INCLUDED_ */
 
 /* vi:set ft=c ts=4 sw=4 et fdm=marker: */
