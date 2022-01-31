@@ -24,6 +24,17 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
+
+#define WITH_SAFE_PCRE_FREE(h)  {                                              \
+    void  (*old_free)(void *ptr);                                              \
+                                                                               \
+    old_free = pcre_free;                                                      \
+    pcre_free = ngx_http_modsec_pcre_noop;                                     \
+    h                                                                          \
+    pcre_free = old_free;                                                      \
+}
+
+
 static ngx_int_t ngx_http_modsecurity_init(ngx_conf_t *cf);
 static void *ngx_http_modsecurity_create_main_conf(ngx_conf_t *cf);
 static char *ngx_http_modsecurity_init_main_conf(ngx_conf_t *cf, void *conf);
@@ -42,6 +53,13 @@ static void ngx_http_modsecurity_cleanup_rules(void *data);
 static void *(*old_pcre_malloc)(size_t);
 static void (*old_pcre_free)(void *ptr);
 static ngx_pool_t *ngx_http_modsec_pcre_pool = NULL;
+
+
+static void
+ngx_http_modsec_pcre_noop(void *ptr)
+{
+}
+
 
 static void *
 ngx_http_modsec_pcre_malloc(size_t size)
@@ -565,7 +583,6 @@ ngx_http_modsecurity_create_main_conf(ngx_conf_t *cf)
      * set by ngx_pcalloc():
      *
      *     conf->modsec = NULL;
-     *     conf->pool = NULL;
      */
 
     return conf;
@@ -578,16 +595,6 @@ ngx_http_modsecurity_init_main_conf(ngx_conf_t *cf, void *conf)
 
     ngx_pool_cleanup_t  *cln;
 
-    cln = ngx_pool_cleanup_add(cf->pool, 0);
-    if (cln == NULL) {
-        return NGX_CONF_ERROR;
-    }
-
-    cln->handler = ngx_http_modsecurity_cleanup_instance;
-    cln->data = mmcf;
-
-    mmcf->pool = cf->pool;
-
     /* Create our ModSecurity instance */
     mmcf->modsec = msc_init();
     if (mmcf->modsec == NULL) {
@@ -595,6 +602,14 @@ ngx_http_modsecurity_init_main_conf(ngx_conf_t *cf, void *conf)
                            "failed to create the ModSecurity instance");
         return NGX_CONF_ERROR;
     }
+
+    cln = ngx_pool_cleanup_add(cf->pool, 0);
+    if (cln == NULL) {
+        return NGX_CONF_ERROR;
+    }
+
+    cln->handler = ngx_http_modsecurity_cleanup_instance;
+    cln->data = mmcf;
 
     /* Provide our connector information to LibModSecurity */
     msc_set_connector_info(mmcf->modsec, MODSECURITY_NGINX_WHOAMI);
@@ -619,12 +634,10 @@ ngx_http_modsecurity_create_conf(ngx_conf_t *cf)
      *     conf->enable = 0;
      *     conf->sanity_checks_enabled = 0;
      *     conf->rules_set = NULL;
-     *     conf->pool = NULL;
      *     conf->transaction_id = NULL;
      */
 
     conf->enable = NGX_CONF_UNSET;
-    conf->pool = cf->pool;
     conf->transaction_id = NGX_CONF_UNSET_PTR;
 #if defined(MODSECURITY_SANITY_CHECKS) && (MODSECURITY_SANITY_CHECKS)
     conf->sanity_checks_enabled = NGX_CONF_UNSET;
@@ -671,31 +684,21 @@ ngx_http_modsecurity_merge_conf(ngx_conf_t *cf, void *parent, void *child)
 static void
 ngx_http_modsecurity_cleanup_instance(void *data)
 {
-    ngx_pool_t                        *old_pool;
-    ngx_http_modsecurity_main_conf_t  *mmcf;
+    ngx_http_modsecurity_main_conf_t *mmcf = data;
 
-    mmcf = (ngx_http_modsecurity_main_conf_t *) data;
-
-    dd("deleting a main conf -- instance is: \"%p\"", mmcf->modsec);
-
-    old_pool = ngx_http_modsecurity_pcre_malloc_init(mmcf->pool);
-    msc_cleanup(mmcf->modsec);
-    ngx_http_modsecurity_pcre_malloc_done(old_pool);
+    WITH_SAFE_PCRE_FREE(
+        msc_cleanup(mmcf->modsec);
+    )
 }
 
 
 static void
 ngx_http_modsecurity_cleanup_rules(void *data)
 {
-    ngx_pool_t                   *old_pool;
-    ngx_http_modsecurity_conf_t  *mcf;
+    ngx_http_modsecurity_conf_t *mcf = data;
 
-    mcf = (ngx_http_modsecurity_conf_t *) data;
-
-    dd("deleting a loc conf -- RuleSet is: \"%p\"", mcf->rules_set);
-
-    old_pool = ngx_http_modsecurity_pcre_malloc_init(mcf->pool);
-    msc_rules_cleanup(mcf->rules_set);
-    ngx_http_modsecurity_pcre_malloc_done(old_pool);
+    WITH_SAFE_PCRE_FREE(
+        msc_rules_cleanup(mcf->rules_set);
+    )
 }
 

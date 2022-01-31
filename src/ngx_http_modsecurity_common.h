@@ -102,13 +102,11 @@ typedef struct {
 
 
 typedef struct {
-    void                      *pool;
     ModSecurity               *modsec;
 } ngx_http_modsecurity_main_conf_t;
 
 
 typedef struct {
-    void                      *pool;
     /* RulesSet or Rules */
     void                      *rules_set;
 
