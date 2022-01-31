@@ -422,27 +422,8 @@ ngx_http_modsecurity_header_filter(ngx_http_request_t *r)
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
 
-    dd("header filter, recovering ctx: %p", ctx);
-
-    if (ctx == NULL)
-    {
-        dd("something really bad happened or ModSecurity is disabled. going to the next filter.");
-        return ngx_http_next_header_filter(r);
-    }
-
-    if (ctx->intervention_triggered) {
-        return ngx_http_next_header_filter(r);
-    }
-
-/* XXX: can it happen ?  already processed i mean */
-/* XXX: check behaviour on 'ModSecurity off' */
-
-    if (ctx && ctx->processed)
-    {
-        /*
-         * FIXME: verify if this request is already processed.
-         */
-        dd("Already processed... going to the next header...");
+    if (ctx == NULL || ctx->processed || ctx->intervention_triggered) {
+        // nothing to be done
         return ngx_http_next_header_filter(r);
     }
 

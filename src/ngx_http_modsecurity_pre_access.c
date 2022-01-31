@@ -44,41 +44,16 @@ ngx_int_t
 ngx_http_modsecurity_pre_access_handler(ngx_http_request_t *r)
 {
 #if 1
-    ngx_pool_t                   *old_pool;
-    ngx_http_modsecurity_ctx_t   *ctx;
-    ngx_http_modsecurity_conf_t  *mcf;
-
-    dd("catching a new _preaccess_ phase handler");
-
-    mcf = ngx_http_get_module_loc_conf(r, ngx_http_modsecurity_module);
-    if (mcf == NULL || mcf->enable != 1)
-    {
-        dd("ModSecurity not enabled... returning");
-        return NGX_DECLINED;
-    }
-    /*
-     * FIXME:
-     * In order to perform some tests, let's accept everything.
-     *
-    if (r->method != NGX_HTTP_GET &&
-        r->method != NGX_HTTP_POST && r->method != NGX_HTTP_HEAD) {
-        dd("ModSecurity is not ready to deal with anything different from " \
-            "POST, GET or HEAD");
-        return NGX_DECLINED;
-    }
-    */
+    ngx_pool_t                  *old_pool;
+    ngx_http_modsecurity_ctx_t  *ctx;
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
 
-    dd("recovering ctx: %p", ctx);
-
-    if (ctx == NULL)
+    if (ctx == NULL
+        || ctx->pre_access_processed
+        || ctx->intervention_triggered)
     {
-        dd("ctx is null; Nothing we can do, returning an error.");
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
-
-    if (ctx->intervention_triggered) {
+        // nothing to be done or we are done already
         return NGX_DECLINED;
     }
 
@@ -134,6 +109,8 @@ ngx_http_modsecurity_pre_access_handler(ngx_http_request_t *r)
             return NGX_DONE;
         }
     }
+
+    ctx->pre_access_processed = 1;
 
     if (ctx->waiting_more_body == 0)
     {
