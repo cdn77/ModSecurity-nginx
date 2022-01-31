@@ -38,8 +38,10 @@ ngx_http_modsecurity_rewrite_handler(ngx_http_request_t *r)
 ngx_int_t
 ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *r)
 {
-    ngx_pool_t                   *old_pool;
-    ngx_http_modsecurity_ctx_t   *ctx;
+    ngx_int_t                    rc;
+    ngx_pool_t                  *old_pool;
+    ngx_connection_t            *c;
+    ngx_http_modsecurity_ctx_t  *ctx;
 
     /*
     if (r->method != NGX_HTTP_GET &&
@@ -61,14 +63,12 @@ ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *r)
         return NGX_DECLINED;
     }
 
-    int ret = 0;
-
-    ngx_connection_t *connection = r->connection;
+    c = r->connection;
     /**
      * FIXME: We may want to use struct sockaddr instead of addr_text.
      *
      */
-    ngx_str_t addr_text = connection->addr_text;
+    ngx_str_t addr_text = c->addr_text;
 
     ctx = ngx_http_modsecurity_create_ctx(r);
 
@@ -87,8 +87,8 @@ ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *r)
      * erliest phase that nginx allow us to attach those kind of hooks.
      *
      */
-    int client_port = ngx_inet_get_port(connection->sockaddr);
-    int server_port = ngx_inet_get_port(connection->local_sockaddr);
+    int client_port = ngx_inet_get_port(c->sockaddr);
+    int server_port = ngx_inet_get_port(c->local_sockaddr);
 
     const char *client_addr = ngx_str_to_char(addr_text, r->pool);
     if (client_addr == (char*)-1) {
@@ -99,7 +99,7 @@ ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *r)
     u_char addr[NGX_SOCKADDR_STRLEN];
     s.len = NGX_SOCKADDR_STRLEN;
     s.data = addr;
-    if (ngx_connection_local_sockaddr(r->connection, &s, 0) != NGX_OK) {
+    if (ngx_connection_local_sockaddr(c, &s, 0) != NGX_OK) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
@@ -109,11 +109,11 @@ ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *r)
     }
 
     old_pool = ngx_http_modsecurity_pcre_malloc_init(r->pool);
-    ret = msc_process_connection(ctx->modsec_transaction,
+    rc = msc_process_connection(ctx->modsec_transaction,
         client_addr, client_port,
         server_addr, server_port);
     ngx_http_modsecurity_pcre_malloc_done(old_pool);
-    if (ret != 1){
+    if (rc != 1){
         dd("Was not able to extract connection information.");
     }
     /**
@@ -126,10 +126,10 @@ ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *r)
      *
      */
     dd("Processing intervention with the connection information filled in");
-    ret = ngx_http_modsecurity_process_intervention(ctx->modsec_transaction, r, 1);
-    if (ret > 0) {
+    rc = ngx_http_modsecurity_process_intervention(ctx->modsec_transaction, r, 1);
+    if (rc > 0) {
         ctx->intervention_triggered = 1;
-        return ret;
+        return rc;
     }
 
     const char *http_version;
@@ -175,10 +175,10 @@ ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *r)
     ngx_http_modsecurity_pcre_malloc_done(old_pool);
 
     dd("Processing intervention with the transaction information filled in (uri, method and version)");
-    ret = ngx_http_modsecurity_process_intervention(ctx->modsec_transaction, r, 1);
-    if (ret > 0) {
+    rc = ngx_http_modsecurity_process_intervention(ctx->modsec_transaction, r, 1);
+    if (rc > 0) {
         ctx->intervention_triggered = 1;
-        return ret;
+        return rc;
     }
 
     /**
@@ -224,13 +224,13 @@ ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *r)
     msc_process_request_headers(ctx->modsec_transaction);
     ngx_http_modsecurity_pcre_malloc_done(old_pool);
     dd("Processing intervention with the request headers information filled in");
-    ret = ngx_http_modsecurity_process_intervention(ctx->modsec_transaction, r, 1);
+    rc = ngx_http_modsecurity_process_intervention(ctx->modsec_transaction, r, 1);
     if (r->error_page) {
         return NGX_DECLINED;
         }
-    if (ret > 0) {
+    if (rc > 0) {
         ctx->intervention_triggered = 1;
-        return ret;
+        return rc;
     }
 
     return NGX_DECLINED;
