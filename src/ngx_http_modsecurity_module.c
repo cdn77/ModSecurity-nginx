@@ -112,7 +112,7 @@ ngx_http_modsecurity_pcre_malloc_done(ngx_pool_t *old_pool)
  * ngx_string's are not null-terminated in common case, so we need to convert
  * them into null-terminated ones before passing to ModSecurity
  */
-ngx_inline char *ngx_str_to_char(ngx_str_t a, ngx_pool_t *p)
+char *ngx_str_to_char(ngx_str_t a, ngx_pool_t *p)
 {
     char *str = NULL;
 
@@ -133,7 +133,7 @@ ngx_inline char *ngx_str_to_char(ngx_str_t a, ngx_pool_t *p)
 }
 
 
-ngx_inline int
+int
 ngx_http_modsecurity_process_intervention (Transaction *transaction, ngx_http_request_t *r, ngx_int_t early_log)
 {
     char *log = NULL;
@@ -237,7 +237,7 @@ ngx_http_modsecurity_process_intervention (Transaction *transaction, ngx_http_re
 }
 
 
-void
+static void
 ngx_http_modsecurity_cleanup(void *data)
 {
     ngx_http_modsecurity_ctx_t *ctx;
@@ -256,7 +256,7 @@ ngx_http_modsecurity_cleanup(void *data)
 }
 
 
-ngx_inline ngx_http_modsecurity_ctx_t *
+ngx_http_modsecurity_ctx_t *
 ngx_http_modsecurity_create_ctx(ngx_http_request_t *r)
 {
     ngx_str_t                          s;
@@ -311,7 +311,7 @@ ngx_http_modsecurity_create_ctx(ngx_http_request_t *r)
 }
 
 
-char *
+static char *
 ngx_conf_set_rules(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     int                                res;
@@ -345,7 +345,7 @@ ngx_conf_set_rules(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 }
 
 
-char *
+static char *
 ngx_conf_set_rules_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     int                                res;
@@ -379,7 +379,7 @@ ngx_conf_set_rules_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 }
 
 
-char *
+static char *
 ngx_conf_set_rules_remote(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     int                                res;
@@ -417,8 +417,8 @@ ngx_conf_set_rules_remote(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     return NGX_CONF_OK;
 }
 
-
-char *ngx_conf_set_transaction_id(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
+static char *
+ngx_conf_set_transaction_id(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
     ngx_str_t                         *value;
     ngx_http_complex_value_t           cv;
     ngx_http_compile_complex_value_t   ccv;

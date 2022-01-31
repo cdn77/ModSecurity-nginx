@@ -20,6 +20,10 @@
 
 #include "ngx_http_modsecurity_common.h"
 
+
+static ngx_int_t ngx_http_modsecurity_header_filter(ngx_http_request_t *r);
+
+
 static ngx_http_output_header_filter_pt ngx_http_next_header_filter;
 
 static ngx_int_t ngx_http_modsecurity_resolv_header_server(ngx_http_request_t *r, ngx_str_t name, off_t offset);
@@ -405,7 +409,7 @@ ngx_http_modsecurity_header_filter_init(void)
 }
 
 
-ngx_int_t
+static ngx_int_t
 ngx_http_modsecurity_header_filter(ngx_http_request_t *r)
 {
     ngx_http_modsecurity_ctx_t *ctx;
