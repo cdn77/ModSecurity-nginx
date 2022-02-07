@@ -452,7 +452,7 @@ static ngx_command_t ngx_http_modsecurity_commands[] =  {
   {
     ngx_string("modsecurity"),
     NGX_HTTP_LOC_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_MAIN_CONF|NGX_CONF_FLAG,
-    ngx_http_set_complex_value_slot,
+    ngx_conf_set_flag_slot,
     NGX_HTTP_LOC_CONF_OFFSET,
     offsetof(ngx_http_modsecurity_conf_t, enable),
     NULL
@@ -690,13 +690,14 @@ ngx_http_modsecurity_create_conf(ngx_conf_t *cf)
     /*
      * set by ngx_pcalloc():
      *
-     *     conf->enable = NULL;
+     *     conf->enable = 0;
      *     conf->sanity_checks_enabled = 0;
      *     conf->rules_set = NULL;
      *     conf->pool = NULL;
      *     conf->transaction_id = NULL;
      */
 
+    conf->enable = NGX_CONF_UNSET;
     conf->rules_set = msc_create_rules_set();
     conf->pool = cf->pool;
     conf->transaction_id = NGX_CONF_UNSET_PTR;
@@ -737,7 +738,7 @@ ngx_http_modsecurity_merge_conf(ngx_conf_t *cf, void *parent, void *child)
     dd("                  state - parent: '%d' child: '%d'",
         (int) c->enable, (int) p->enable);
 
-    ngx_conf_merge_null_ptr_value(c->enable, p->enable, NULL);
+    ngx_conf_merge_value(c->enable, p->enable, 0);
     ngx_conf_merge_ptr_value(c->transaction_id, p->transaction_id, NULL);
 #if defined(MODSECURITY_SANITY_CHECKS) && (MODSECURITY_SANITY_CHECKS)
     ngx_conf_merge_value(c->sanity_checks_enabled, p->sanity_checks_enabled, 0);
