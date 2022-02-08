@@ -27,9 +27,7 @@ ngx_http_modsecurity_request_read(ngx_http_request_t *r)
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
 
-#if defined(nginx_version) && nginx_version >= 8011
     r->main->count--;
-#endif
 
     if (ctx->waiting_more_body)
     {
@@ -94,11 +92,6 @@ ngx_http_modsecurity_pre_access_handler(ngx_http_request_t *r)
         rc = ngx_http_read_client_request_body(r,
             ngx_http_modsecurity_request_read);
         if (rc == NGX_ERROR || rc >= NGX_HTTP_SPECIAL_RESPONSE) {
-#if (nginx_version < 1002006) ||                                             \
-    (nginx_version >= 1003000 && nginx_version < 1003009)
-            r->main->count--;
-#endif
-
             return rc;
         }
         if (rc == NGX_AGAIN)
