@@ -307,7 +307,7 @@ ngx_http_modsecurity_create_ctx(ngx_http_request_t *r, ModSecurity *modsec,
 
 
 static char *
-ngx_conf_set_rules(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+ngx_http_modsecurity_set_rules(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ngx_http_modsecurity_conf_t *mcf = conf;
 
@@ -347,7 +347,8 @@ ngx_conf_set_rules(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
 
 static char *
-ngx_conf_set_rules_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+ngx_http_modsecurity_set_rules_file(ngx_conf_t *cf, ngx_command_t *cmd,
+        void *conf)
 {
     ngx_http_modsecurity_conf_t *mcf = conf;
 
@@ -387,7 +388,8 @@ ngx_conf_set_rules_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
 
 static char *
-ngx_conf_set_rules_remote(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+ngx_http_modsecurity_set_rules_remote(ngx_conf_t *cf, ngx_command_t *cmd,
+        void *conf)
 {
     ngx_http_modsecurity_conf_t *mcf = conf;
 
@@ -428,7 +430,8 @@ ngx_conf_set_rules_remote(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 }
 
 static char *
-ngx_conf_set_transaction_id(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
+ngx_http_modsecurity_set_transaction_id(ngx_conf_t *cf, ngx_command_t *cmd,
+        void *conf) {
     ngx_str_t                         *value;
     ngx_http_complex_value_t           cv;
     ngx_http_compile_complex_value_t   ccv;
@@ -470,7 +473,7 @@ static ngx_command_t ngx_http_modsecurity_commands[] =  {
   {
     ngx_string("modsecurity_rules"),
     NGX_HTTP_LOC_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
-    ngx_conf_set_rules,
+    ngx_http_modsecurity_set_rules,
     NGX_HTTP_LOC_CONF_OFFSET,
     0,
     NULL
@@ -478,7 +481,7 @@ static ngx_command_t ngx_http_modsecurity_commands[] =  {
   {
     ngx_string("modsecurity_rules_file"),
     NGX_HTTP_LOC_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
-    ngx_conf_set_rules_file,
+    ngx_http_modsecurity_set_rules_file,
     NGX_HTTP_LOC_CONF_OFFSET,
     0,
     NULL
@@ -486,7 +489,7 @@ static ngx_command_t ngx_http_modsecurity_commands[] =  {
   {
     ngx_string("modsecurity_rules_remote"),
     NGX_HTTP_LOC_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE2,
-    ngx_conf_set_rules_remote,
+    ngx_http_modsecurity_set_rules_remote,
     NGX_HTTP_LOC_CONF_OFFSET,
     0,
     NULL
@@ -494,7 +497,7 @@ static ngx_command_t ngx_http_modsecurity_commands[] =  {
   {
     ngx_string("modsecurity_transaction_id"),
     NGX_HTTP_LOC_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_MAIN_CONF|NGX_CONF_1MORE,
-    ngx_conf_set_transaction_id,
+    ngx_http_modsecurity_set_transaction_id,
     NGX_HTTP_LOC_CONF_OFFSET,
     0,
     NULL
