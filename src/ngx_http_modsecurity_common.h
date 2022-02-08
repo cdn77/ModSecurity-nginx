@@ -78,9 +78,7 @@ typedef struct {
 
 
 typedef struct {
-    ngx_http_request_t *r;
     Transaction *modsec_transaction;
-    ModSecurityIntervention *delayed_intervention;
 
 #if defined(MODSECURITY_SANITY_CHECKS) && (MODSECURITY_SANITY_CHECKS)
     /*
