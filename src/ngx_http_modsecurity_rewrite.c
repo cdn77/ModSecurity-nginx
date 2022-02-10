@@ -234,7 +234,10 @@ ngx_http_modsecurity_process_url(ngx_http_request_t *r)
 static ngx_int_t
 ngx_http_modsecurity_process_req_header(ngx_http_request_t *r)
 {
+    ngx_uint_t                   i;
     ngx_pool_t                  *old_pool;
+    ngx_list_part_t             *part;
+    ngx_table_elt_t             *header;
     ngx_http_modsecurity_ctx_t  *ctx;
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
@@ -242,38 +245,24 @@ ngx_http_modsecurity_process_req_header(ngx_http_request_t *r)
         return NGX_ERROR;
     }
 
-    /**
-     * Since incoming request headers are already in place, lets send it to ModSecurity
-     *
-     */
-    ngx_list_part_t *part = &r->headers_in.headers.part;
-    ngx_table_elt_t *data = part->elts;
-    ngx_uint_t i = 0;
-    for (i = 0 ; /* void */ ; i++) {
+    part = &r->headers_in.headers.part;
+    header = part->elts;
+
+    for (i = 0; /* void */; i++) {
+
         if (i >= part->nelts) {
             if (part->next == NULL) {
                 break;
             }
 
             part = part->next;
-            data = part->elts;
+            header = part->elts;
             i = 0;
         }
 
-        /**
-         * By using u_char (utf8_t) I believe nginx is hoping to deal
-         * with utf8 strings.
-         * Casting those into to unsigned char * in order to pass
-         * it to ModSecurity, it will handle with those later.
-         *
-         */
-
-        dd("Adding request header: %.*s with value %.*s", (int)data[i].key.len, data[i].key.data, (int) data[i].value.len, data[i].value.data);
         msc_add_n_request_header(ctx->modsec_transaction,
-            (const unsigned char *) data[i].key.data,
-            data[i].key.len,
-            (const unsigned char *) data[i].value.data,
-            data[i].value.len);
+                                 header[i].key.data, header[i].key.len,
+                                 header[i].value.data, header[i].value.len);
     }
 
     /**

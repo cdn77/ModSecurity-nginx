@@ -77,12 +77,9 @@ ngx_http_modsecurity_header_filter(ngx_http_request_t *r)
             continue;
         }
 
-        /*
-         * Doing this ugly cast here, explanation on the request_header
-         */
         msc_add_n_response_header(ctx->modsec_transaction,
-            (const unsigned char *) header[i].key.data, header[i].key.len,
-            (const unsigned char *) header[i].value.data, header[i].value.len);
+                                  header[i].key.data, header[i].key.len,
+                                  header[i].value.data, header[i].value.len);
     }
 
     /* prepare extra paramters for msc_process_response_headers() */
