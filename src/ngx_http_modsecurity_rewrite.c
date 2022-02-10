@@ -51,6 +51,10 @@ ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *r)
     ngx_http_modsecurity_conf_t       *mcf;
     ngx_http_modsecurity_main_conf_t  *mmcf;
 
+    if (r != r->main || r->internal) {
+        return NGX_DECLINED;
+    }
+
     /*
     if (r->method != NGX_HTTP_GET &&
         r->method != NGX_HTTP_POST && r->method != NGX_HTTP_HEAD) {

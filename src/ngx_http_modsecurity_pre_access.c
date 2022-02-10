@@ -45,6 +45,10 @@ ngx_http_modsecurity_pre_access_handler(ngx_http_request_t *r)
     ngx_pool_t                  *old_pool;
     ngx_http_modsecurity_ctx_t  *ctx;
 
+    if (r != r->main || r->internal) {
+        return NGX_DECLINED;
+    }
+
     ctx = ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
 
     if (ctx == NULL

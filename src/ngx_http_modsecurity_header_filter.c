@@ -51,12 +51,10 @@ ngx_http_modsecurity_header_filter(ngx_http_request_t *r)
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
 
-    if (ctx == NULL || ctx->processed || ctx->intervention_triggered) {
+    if (ctx == NULL || ctx->intervention_triggered) {
         // nothing to be done
         return ngx_http_next_header_filter(r);
     }
-
-    ctx->processed = 1;
 
     part = &r->headers_out.headers.part;
     header = part->elts;
@@ -99,6 +97,7 @@ ngx_http_modsecurity_header_filter(ngx_http_request_t *r)
         return ngx_http_next_header_filter(r);
     }
     if (rc > 0) {
+        ctx->intervention_triggered = 1;
         return ngx_http_filter_finalize_request(r, &ngx_http_modsecurity_module, rc);
     }
 
