@@ -218,10 +218,6 @@ ngx_http_modsecurity_process_intervention (Transaction *transaction, ngx_http_re
         r->headers_out.location = location;
         r->headers_out.location->hash = 1;
 
-#if defined(MODSECURITY_SANITY_CHECKS) && (MODSECURITY_SANITY_CHECKS)
-        ngx_http_modsecurity_store_ctx_header(r, &location->key, &location->value);
-#endif
-
         return intervention.status;
     }
 
@@ -285,13 +281,6 @@ ngx_http_modsecurity_create_ctx(ngx_http_request_t *r, ModSecurity *modsec,
     }
 
     dd("transaction created");
-
-#if defined(MODSECURITY_SANITY_CHECKS) && (MODSECURITY_SANITY_CHECKS)
-    ctx->sanity_headers_out = ngx_array_create(r->pool, 12, sizeof(ngx_http_modsecurity_header_t));
-    if (ctx->sanity_headers_out == NULL) {
-        return NULL;
-    }
-#endif
 
     cln = ngx_pool_cleanup_add(r->pool, sizeof(ngx_http_modsecurity_ctx_t));
     if (cln == NULL) {
@@ -635,16 +624,12 @@ ngx_http_modsecurity_create_conf(ngx_conf_t *cf)
      * set by ngx_pcalloc():
      *
      *     conf->enable = 0;
-     *     conf->sanity_checks_enabled = 0;
      *     conf->rules_set = NULL;
      *     conf->transaction_id = NULL;
      */
 
     conf->enable = NGX_CONF_UNSET;
     conf->transaction_id = NGX_CONF_UNSET_PTR;
-#if defined(MODSECURITY_SANITY_CHECKS) && (MODSECURITY_SANITY_CHECKS)
-    conf->sanity_checks_enabled = NGX_CONF_UNSET;
-#endif
 
     return conf;
 }
@@ -661,10 +646,6 @@ ngx_http_modsecurity_merge_conf(ngx_conf_t *cf, void *parent, void *child)
 
     ngx_conf_merge_value(conf->enable, prev->enable, 0);
     ngx_conf_merge_ptr_value(conf->transaction_id, prev->transaction_id, NULL);
-#if defined(MODSECURITY_SANITY_CHECKS) && (MODSECURITY_SANITY_CHECKS)
-    ngx_conf_merge_value(conf->sanity_checks_enabled,
-                         prev->sanity_checks_enabled, 0);
-#endif
 
     if (prev->rules_set != NULL) {
         if (conf->rules_set != NULL) {

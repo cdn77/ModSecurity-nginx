@@ -17,19 +17,6 @@
  * #define MODSECURITY_DDEBUG 1
  */
 
-/*
- * Setting MODSECURITY_SANITY_CHECKS will help you in the debug process. By
- * defining MODSECURITY_SANITY_CHECKS a set of functions will be executed in
- * order to make sure the well behavior of ModSecurity, letting you know (via
- * debug_logs) if something unexpected happens.
- *
- * If performance is not a concern, it is safe to keep it set.
- *
- */
-#ifndef MODSECURITY_SANITY_CHECKS
-#define MODSECURITY_SANITY_CHECKS 0
-#endif
-
 #if defined(MODSECURITY_DDEBUG) && (MODSECURITY_DDEBUG)
 
 #   if (NGX_HAVE_VARIADIC_MACROS)
