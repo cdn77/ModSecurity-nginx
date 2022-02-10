@@ -112,7 +112,6 @@ if test -n "$ngx_module_link"; then
 	ngx_module_srcs="$ngx_addon_dir/src/ngx_http_modsecurity_module.c \
             $ngx_addon_dir/src/ngx_http_modsecurity_pre_access.c \
             $ngx_addon_dir/src/ngx_http_modsecurity_header_filter.c \
-            $ngx_addon_dir/src/ngx_http_modsecurity_body_filter.c \
             $ngx_addon_dir/src/ngx_http_modsecurity_log.c \
             $ngx_addon_dir/src/ngx_http_modsecurity_rewrite.c \
             "
@@ -143,7 +142,6 @@ else
 	    $ngx_addon_dir/src/ngx_http_modsecurity_module.c \
 	    $ngx_addon_dir/src/ngx_http_modsecurity_pre_access.c \
 	    $ngx_addon_dir/src/ngx_http_modsecurity_header_filter.c \
-	    $ngx_addon_dir/src/ngx_http_modsecurity_body_filter.c \
 	    $ngx_addon_dir/src/ngx_http_modsecurity_log.c \
 	    $ngx_addon_dir/src/ngx_http_modsecurity_rewrite.c \
 	    "

@@ -353,13 +353,6 @@ ngx_http_modsecurity_header_filter(ngx_http_request_t *r)
         return ngx_http_next_header_filter(r);
     }
 
-    /*
-     * Lets ask nginx to keep the response body in memory
-     *
-     * FIXME: I don't see a reason to keep it `1' when SecResponseBody is disabled.
-     */
-    r->filter_need_in_memory = 1;
-
     ctx->processed = 1;
     /*
      *
@@ -436,26 +429,6 @@ ngx_http_modsecurity_header_filter(ngx_http_request_t *r)
     if (ret > 0) {
         return ngx_http_filter_finalize_request(r, &ngx_http_modsecurity_module, ret);
     }
-
-    /*
-     * Proxies will not like this... but it is necessary to unset
-     * the content length in order to manipulate the content of
-     * response body in ModSecurity.
-     *
-     * This header may arrive at the client before ModSecurity had
-     * a change to make any modification. That is why it is necessary
-     * to set this to -1 here.
-     *
-     * We need to have some kind of flag the decide if ModSecurity
-     * will make a modification or not. If not, keep the content and
-     * make the proxy servers happy.
-     *
-     */
-
-    /*
-     * The line below is commented to make the spdy test to work
-     */
-     //r->headers_out.content_length_n = -1;
 
     return ngx_http_next_header_filter(r);
 }

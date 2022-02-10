@@ -122,10 +122,6 @@ ngx_pool_t *ngx_http_modsecurity_pcre_malloc_init(ngx_pool_t *pool);
 void ngx_http_modsecurity_pcre_malloc_done(ngx_pool_t *old_pool);
 #endif
 
-/* ngx_http_modsecurity_body_filter.c */
-void ngx_http_modsecurity_body_filter_init(void);
-ngx_int_t ngx_http_modsecurity_body_filter(ngx_http_request_t *r, ngx_chain_t *in);
-
 /* ngx_http_modsecurity_header_filter.c */
 void ngx_http_modsecurity_header_filter_init(void);
 

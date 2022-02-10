@@ -555,7 +555,6 @@ ngx_http_modsecurity_init(ngx_conf_t *cf)
     *h = ngx_http_modsecurity_log_handler;
 
     ngx_http_modsecurity_header_filter_init();
-    ngx_http_modsecurity_body_filter_init();
 
     return NGX_OK;
 }
