@@ -43,7 +43,7 @@ ngx_http_modsecurity_header_filter(ngx_http_request_t *r)
     ngx_uint_t                   i, status;
     ngx_pool_t                  *old_pool;
     ngx_list_part_t             *part;
-    ngx_table_elt_t             *data;
+    ngx_table_elt_t             *header;
     ngx_http_modsecurity_ctx_t  *ctx;
 
 
@@ -59,29 +59,30 @@ ngx_http_modsecurity_header_filter(ngx_http_request_t *r)
     ctx->processed = 1;
 
     part = &r->headers_out.headers.part;
-    data = part->elts;
+    header = part->elts;
 
-    for (i = 0 ;; i++)
-    {
-        if (i >= part->nelts)
-        {
+    for (i = 0; /* void */; i++) {
+
+        if (i >= part->nelts) {
             if (part->next == NULL) {
                 break;
             }
 
             part = part->next;
-            data = part->elts;
+            header = part->elts;
             i = 0;
+        }
+
+        if (header[i].hash == 0) {
+            continue;
         }
 
         /*
          * Doing this ugly cast here, explanation on the request_header
          */
         msc_add_n_response_header(ctx->modsec_transaction,
-            (const unsigned char *) data[i].key.data,
-            data[i].key.len,
-            (const unsigned char *) data[i].value.data,
-            data[i].value.len);
+            (const unsigned char *) header[i].key.data, header[i].key.len,
+            (const unsigned char *) header[i].value.data, header[i].value.len);
     }
 
     /* prepare extra paramters for msc_process_response_headers() */
