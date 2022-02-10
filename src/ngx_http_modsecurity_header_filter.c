@@ -39,8 +39,8 @@ static ngx_int_t
 ngx_http_modsecurity_header_filter(ngx_http_request_t *r)
 {
     int                          rc;
-    char                        *http_response_ver;
-    ngx_uint_t                   i, status;
+    char                        *http_protocol;
+    ngx_uint_t                   i;
     ngx_pool_t                  *old_pool;
     ngx_list_part_t             *part;
     ngx_table_elt_t             *header;
@@ -82,26 +82,17 @@ ngx_http_modsecurity_header_filter(ngx_http_request_t *r)
                                   header[i].value.data, header[i].value.len);
     }
 
-    /* prepare extra paramters for msc_process_response_headers() */
-    if (r->err_status) {
-        status = r->err_status;
+    if (r->http_version < NGX_HTTP_VERSION_10) {
+        http_protocol = "HTTP/0.9";
+    } else if (r->http_version < NGX_HTTP_VERSION_20) {
+        http_protocol = "HTTP/1.1";
     } else {
-        status = r->headers_out.status;
+        http_protocol = (char *)r->http_protocol.data;
     }
-
-    /*
-     * NGINX always sends HTTP response with HTTP/1.1, except cases when
-     * HTTP V2 module is enabled, and request has been posted with HTTP/2.0.
-     */
-    http_response_ver = "HTTP 1.1";
-#if (NGX_HTTP_V2)
-    if (r->stream) {
-        http_response_ver = "HTTP 2.0";
-    }
-#endif
 
     old_pool = ngx_http_modsecurity_pcre_malloc_init(r->pool);
-    msc_process_response_headers(ctx->modsec_transaction, status, http_response_ver);
+    msc_process_response_headers(ctx->modsec_transaction, r->headers_out.status,
+                                 http_protocol);
     ngx_http_modsecurity_pcre_malloc_done(old_pool);
     rc = ngx_http_modsecurity_process_intervention(ctx->modsec_transaction, r, 0);
     if (r->error_page) {
