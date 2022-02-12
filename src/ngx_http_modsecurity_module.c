@@ -328,6 +328,7 @@ ngx_http_modsecurity_set_rules(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "Failed to load the rules: \"%V\": %s",
                            value[1], error);
+        free((char *)error);
         return NGX_CONF_ERROR;
     }
 
@@ -369,6 +370,7 @@ ngx_http_modsecurity_set_rules_file(ngx_conf_t *cf, ngx_command_t *cmd,
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "Failed to load the rules from file %V: %s",
                            value[1], error);
+        free((char *)error);
         return NGX_CONF_ERROR;
     }
 
@@ -412,6 +414,7 @@ ngx_http_modsecurity_set_rules_remote(ngx_conf_t *cf, ngx_command_t *cmd,
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "Failed to load the remote rules %V %V: %s",
                            value[1], value[2], error);
+        free((char *)error);
         return NGX_CONF_ERROR;
     }
 
@@ -646,6 +649,7 @@ ngx_http_modsecurity_merge_conf(ngx_conf_t *cf, void *parent, void *child)
 
             if (rc < 0) {
                 ngx_conf_log_error(NGX_LOG_EMERG, cf, 0, error);
+                free((char *)error);
                 return NGX_CONF_ERROR;
             }
 
