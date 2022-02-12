@@ -149,38 +149,27 @@ char *ngx_str_to_char(ngx_str_t a, ngx_pool_t *p)
 }
 
 
-int
-ngx_http_modsecurity_process_intervention (Transaction *transaction, ngx_http_request_t *r, ngx_int_t early_log)
+ngx_int_t
+ngx_http_modsecurity_process_intervention(ngx_http_request_t *r,
+    ngx_http_modsecurity_ctx_t *ctx, ngx_int_t early_log)
 {
-    char *log = NULL;
-    ModSecurityIntervention intervention;
-    intervention.status = 200;
-    intervention.url = NULL;
-    intervention.log = NULL;
-    intervention.disruptive = 0;
-    ngx_http_modsecurity_ctx_t *ctx = NULL;
+    ModSecurityIntervention intervention = {
+        .status = 200,
+        .url = NULL,
+        .log = NULL,
+        .disruptive = 0,
+    };
 
     dd("processing intervention");
 
-    ctx = ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
-    if (ctx == NULL)
-    {
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
-
-    if (msc_intervention(transaction, &intervention) == 0) {
+    if (msc_intervention(ctx->modsec_transaction, &intervention) == 0) {
         dd("nothing to do");
-        return 0;
+        return NGX_OK;
     }
 
-    log = intervention.log;
-    if (intervention.log == NULL) {
-        log = "(no log message was specified)";
-    }
-
-    ngx_log_error(NGX_LOG_ERR, (ngx_log_t *)r->connection->log, 0, "%s", log);
-
-    if (intervention.log != NULL) {
+    if (intervention.log != NULL && ctx->log_intervention) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                      "%s", intervention.log);
         free(intervention.log);
     }
 
@@ -191,7 +180,7 @@ ngx_http_modsecurity_process_intervention (Transaction *transaction, ngx_http_re
         if (r->header_sent)
         {
             dd("Headers are already sent. Cannot perform the redirection at this point.");
-            return -1;
+            return NGX_ERROR;
         }
 
         /**
@@ -240,12 +229,13 @@ ngx_http_modsecurity_process_intervention (Transaction *transaction, ngx_http_re
         if (r->header_sent)
         {
             dd("Headers are already sent. Cannot perform the redirection at this point.");
-            return -1;
+            return NGX_ERROR;
         }
         dd("intervention -- returning code: %d", intervention.status);
         return intervention.status;
     }
-    return 0;
+
+    return NGX_OK;
 }
 
 
@@ -273,11 +263,9 @@ ngx_http_modsecurity_create_ctx(ngx_http_request_t *r, ModSecurity *modsec,
     if (transaction_id->len > 0) {
         ctx->modsec_transaction =
             msc_new_transaction_with_id(modsec, rules,
-                                        (char *) transaction_id->data,
-                                        r->connection->log);
+                                        (char *) transaction_id->data, r);
     } else {
-        ctx->modsec_transaction =
-            msc_new_transaction(modsec, rules, r->connection->log);
+        ctx->modsec_transaction = msc_new_transaction(modsec, rules, r);
     }
 
     dd("transaction created");

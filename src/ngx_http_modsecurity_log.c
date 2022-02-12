@@ -22,15 +22,24 @@
 
 
 void
-ngx_http_modsecurity_log(void *log, const void* data)
+ngx_http_modsecurity_log(void *data, const void *m)
 {
-    const char *msg;
-    if (log == NULL) {
+    const char *msg = m;
+    ngx_http_request_t *r = data;
+
+    ngx_http_modsecurity_ctx_t  *ctx;
+
+    if (r == NULL) {
         return;
     }
-    msg = (const char *) data;
 
-    ngx_log_error(NGX_LOG_INFO, (ngx_log_t *)log, 0, "%s", msg);
+    ctx = ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
+
+    if (ctx == NULL || !ctx->log_intervention) {
+        return;
+    }
+
+    ngx_log_error(NGX_LOG_WARN, r->connection->log, 0, "%s", msg);
 }
 
 

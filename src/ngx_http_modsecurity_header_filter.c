@@ -92,7 +92,8 @@ ngx_http_modsecurity_header_filter(ngx_http_request_t *r)
     msc_process_response_headers(ctx->modsec_transaction, r->headers_out.status,
                                  http_protocol);
     ngx_http_modsecurity_pcre_malloc_done(old_pool);
-    rc = ngx_http_modsecurity_process_intervention(ctx->modsec_transaction, r, 0);
+
+    rc = ngx_http_modsecurity_process_intervention(r, ctx, 0);
     if (r->error_page) {
         return ngx_http_next_header_filter(r);
     }

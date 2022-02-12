@@ -73,8 +73,7 @@ ngx_http_modsecurity_request_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
          * it may ask for a intervention in consequence of that.
          *
          */
-        rcms = ngx_http_modsecurity_process_intervention(
-                                                 ctx->modsec_transaction, r, 0);
+        rcms = ngx_http_modsecurity_process_intervention(r, ctx, 0);
         if (rcms > 0) {
             return rcms;
         }
@@ -87,8 +86,7 @@ ngx_http_modsecurity_request_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
         msc_process_request_body(ctx->modsec_transaction);
         ngx_http_modsecurity_pcre_malloc_done(old_pool);
 
-        rcms = ngx_http_modsecurity_process_intervention(
-                                                 ctx->modsec_transaction, r, 0);
+        rcms = ngx_http_modsecurity_process_intervention(r, ctx, 0);
         if (rcms > 0) {
             return rcms;
         }

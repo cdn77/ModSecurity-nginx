@@ -93,6 +93,8 @@ ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *r)
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
+    ctx->log_intervention = 0;
+
     rc = ngx_http_modsecurity_process_connection(r);
     if (rc > 0) {
         ctx->intervention_triggered = 1;
@@ -175,7 +177,7 @@ ngx_http_modsecurity_process_connection(ngx_http_request_t *r)
      *
      */
     dd("Processing intervention with the connection information filled in");
-    return ngx_http_modsecurity_process_intervention(ctx->modsec_transaction, r, 1);
+    return ngx_http_modsecurity_process_intervention(r, ctx, 1);
 }
 
 
@@ -231,7 +233,7 @@ ngx_http_modsecurity_process_url(ngx_http_request_t *r)
     ngx_http_modsecurity_pcre_malloc_done(old_pool);
 
     dd("Processing intervention with the transaction information filled in (uri, method and version)");
-    return ngx_http_modsecurity_process_intervention(ctx->modsec_transaction, r, 1);
+    return ngx_http_modsecurity_process_intervention(r, ctx, 1);
 }
 
 
@@ -279,5 +281,5 @@ ngx_http_modsecurity_process_req_header(ngx_http_request_t *r)
     ngx_http_modsecurity_pcre_malloc_done(old_pool);
     dd("Processing intervention with the request headers information filled in");
 
-    return ngx_http_modsecurity_process_intervention(ctx->modsec_transaction, r, 1);
+    return ngx_http_modsecurity_process_intervention(r, ctx, 1);
 }
