@@ -117,6 +117,15 @@ ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *r)
         return rc;
     }
 
+    // no request body
+    if (r->headers_in.content_length_n < 0 && !r->headers_in.chunked) {
+        msc_process_request_body(ctx->modsec_transaction);
+        rc = ngx_http_modsecurity_process_intervention(r, ctx, 1);
+        if (rc > 0) {
+            return rc;
+        }
+    }
+
     return NGX_DECLINED;
 }
 
