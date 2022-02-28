@@ -21,7 +21,7 @@ use Test::Nginx;
 select STDERR; $| = 1;
 select STDOUT; $| = 1;
 
-my $t = Test::Nginx->new()->plan(5)->write_file_expand('nginx.conf', <<'EOF');
+my $t = Test::Nginx->new()->plan(2)->write_file_expand('nginx.conf', <<'EOF');
 
 %%TEST_GLOBALS%%
 
@@ -114,30 +114,6 @@ $t->run();
 ###############################################################################
 
 # charge limit_req
-
-http(<<EOF);
-GET /?what=block403 HTTP/1.0
-Host: server1
-
-EOF
-
-isnt(lines($t, 'e_s1l1.log', 'unique_id "tid-HTTP-DEFAULT-'), 0, 'http default');
-
-http(<<EOF);
-GET /?what=block403 HTTP/1.0
-Host: server2
-
-EOF
-
-isnt(lines($t, 'e_s2l1.log', 'unique_id "tid-SERVER-DEFAULT-'), 0, 'server default');
-
-http(<<EOF);
-GET /specific/?what=block403 HTTP/1.0
-Host: server2
-
-EOF
-
-isnt(lines($t, 'e_s2l2.log', 'unique_id "tid-LOCATION-SPECIFIC-'), 0, 'location specific');
 
 http(<<EOF);
 GET /debuglog/?what=block403 HTTP/1.0

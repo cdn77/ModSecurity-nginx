@@ -147,7 +147,7 @@ mkdir($t->testdir() . '/subfolder3/subfolder4');
 $t->write_file("/subfolder3/subfolder4/index.html", "should be moved/blocked before this.");
 
 $t->run();
-$t->plan(9);
+$t->plan(8);
 
 ###############################################################################
 
@@ -232,4 +232,3 @@ like($subfolder4, qr/what=subfolder4/, 'subfolder4');
 like($subfolder4, qr/what=subfolder3/, 'subfolder4 / subfolder3');
 
 like($subfolder4, qr/what=subfolder4withE/, 'subfolder4');
-like($subfolder4, qr/---E--/, 'subfolder4');
