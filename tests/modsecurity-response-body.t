@@ -29,6 +29,8 @@ $t->write_file_expand('nginx.conf', <<'EOF');
 
 daemon off;
 
+load_module /usr/lib/nginx/modules/ngx_http_modsecurity_module.so;
+
 events {
 }
 
