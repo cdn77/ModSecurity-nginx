@@ -248,38 +248,71 @@ ngx_http_modsecurity_cleanup(void *data)
 }
 
 
-ngx_http_modsecurity_ctx_t *
-ngx_http_modsecurity_create_ctx(ngx_http_request_t *r, ModSecurity *modsec,
-        void *rules, ngx_str_t *transaction_id)
+ngx_int_t
+ngx_http_modsecurity_create_ctx(ngx_http_request_t *r,
+        ngx_http_modsecurity_ctx_t **ctx)
 {
-    ngx_pool_cleanup_t          *cln;
-    ngx_http_modsecurity_ctx_t  *ctx;
+    ngx_str_t                          tid;
+    ngx_pool_cleanup_t                *cln;
+    ngx_http_modsecurity_conf_t       *mcf;
+    ngx_http_modsecurity_main_conf_t  *mmcf;
 
-    ctx = ngx_pcalloc(r->pool, sizeof(ngx_http_modsecurity_ctx_t));
-    if (ctx == NULL) {
-        return NULL;
+    if (r != r->main || r->internal) {
+        return NGX_DECLINED;
     }
 
-    if (transaction_id->len > 0) {
-        ctx->modsec_transaction =
-            msc_new_transaction_with_id(modsec, rules,
-                                        (char *) transaction_id->data, r);
+    /*
+    if (r->method != NGX_HTTP_GET &&
+        r->method != NGX_HTTP_POST && r->method != NGX_HTTP_HEAD) {
+        dd("ModSecurity is not ready to deal with anything different from " \
+            "POST, GET or HEAD");
+        return NGX_DECLINED;
+    }
+    */
+
+    mmcf = ngx_http_get_module_main_conf(r, ngx_http_modsecurity_module);
+    mcf = ngx_http_get_module_loc_conf(r, ngx_http_modsecurity_module);
+
+    if (mcf->rules_set == NULL) {
+        // no rules, nothing to do
+        return NGX_DECLINED;
+    }
+
+    ngx_str_null(&tid);
+    if (mcf->transaction_id) {
+        if (ngx_http_complex_value(r, mcf->transaction_id, &tid) != NGX_OK) {
+            return NGX_ERROR;
+        }
+    }
+
+    *ctx = ngx_pcalloc(r->pool, sizeof(ngx_http_modsecurity_ctx_t));
+    if (*ctx == NULL) {
+        return NGX_ERROR;
+    }
+
+    (*ctx)->log_intervention = 0;
+
+    if (tid.len > 0) {
+        (*ctx)->modsec_transaction =
+            msc_new_transaction_with_id(mmcf->modsec, mcf->rules_set,
+                                        (char *) tid.data, r);
     } else {
-        ctx->modsec_transaction = msc_new_transaction(modsec, rules, r);
+        (*ctx)->modsec_transaction =
+            msc_new_transaction(mmcf->modsec, mcf->rules_set, r);
     }
 
     dd("transaction created");
 
     cln = ngx_pool_cleanup_add(r->pool, sizeof(ngx_http_modsecurity_ctx_t));
     if (cln == NULL) {
-        return NULL;
+        return NGX_ERROR;
     }
     cln->handler = ngx_http_modsecurity_cleanup;
-    cln->data = ctx;
+    cln->data = *ctx;
 
-    ngx_http_set_ctx(r, ctx, ngx_http_modsecurity_module);
+    ngx_http_set_ctx(r, *ctx, ngx_http_modsecurity_module);
 
-    return ctx;
+    return NGX_OK;
 }
 
 

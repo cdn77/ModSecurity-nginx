@@ -21,14 +21,21 @@
 #include "ngx_http_modsecurity_common.h"
 
 
-static ngx_int_t ngx_http_modsecurity_process_req_header(ngx_http_request_t *r);
-static ngx_int_t ngx_http_modsecurity_process_url(ngx_http_request_t *r);
-static ngx_int_t ngx_http_modsecurity_process_connection(ngx_http_request_t *r);
+ngx_int_t ngx_http_modsecurity_process_connection(ngx_http_request_t *r,
+        ngx_http_modsecurity_ctx_t *ctx);
+ngx_int_t ngx_http_modsecurity_process_url(ngx_http_request_t *r,
+        ngx_http_modsecurity_ctx_t *ctx);
+ngx_int_t ngx_http_modsecurity_process_req_header(ngx_http_request_t *r,
+        ngx_http_modsecurity_ctx_t *ctx);
+ngx_int_t ngx_http_modsecurity_process_empty_req_body(ngx_http_request_t *r,
+        ngx_http_modsecurity_ctx_t *ctx);
 
 
 ngx_int_t
 ngx_http_modsecurity_rewrite_handler(ngx_http_request_t *r)
 {
+    ngx_int_t                     rc;
+    ngx_http_modsecurity_ctx_t   *ctx;
     ngx_http_modsecurity_conf_t  *mcf;
 
     mcf = ngx_http_get_module_loc_conf(r, ngx_http_modsecurity_module);
@@ -38,76 +45,30 @@ ngx_http_modsecurity_rewrite_handler(ngx_http_request_t *r)
         return NGX_DECLINED;
     }
 
-    return ngx_http_modsecurity_rewrite_handler_internal(r);
-}
-
-
-ngx_int_t
-ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *r)
-{
-    ngx_int_t                          rc;
-    ngx_str_t                          tid;
-    ngx_http_modsecurity_ctx_t        *ctx;
-    ngx_http_modsecurity_conf_t       *mcf;
-    ngx_http_modsecurity_main_conf_t  *mmcf;
-
-    if (r != r->main || r->internal) {
-        return NGX_DECLINED;
-    }
-
-    /*
-    if (r->method != NGX_HTTP_GET &&
-        r->method != NGX_HTTP_POST && r->method != NGX_HTTP_HEAD) {
-        dd("ModSecurity is not ready to deal with anything different from " \
-            "POST, GET or HEAD");
-        return NGX_DECLINED;
-    }
-    */
-
     ctx = ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
     if (ctx != NULL) {
         dd("already processed before");
         return NGX_DECLINED;
     }
 
-    mmcf = ngx_http_get_module_main_conf(r, ngx_http_modsecurity_module);
-    mcf = ngx_http_get_module_loc_conf(r, ngx_http_modsecurity_module);
-
-    if (mcf->rules_set == NULL) {
-        // no rules, nothing to do
-        return NGX_DECLINED;
+    rc = ngx_http_modsecurity_create_ctx(r, &ctx);
+    if (rc != NGX_OK) {
+        return rc;
     }
 
-    ngx_str_null(&tid);
-    if (mcf->transaction_id) {
-        if (ngx_http_complex_value(r, mcf->transaction_id, &tid) != NGX_OK) {
-            return NGX_ERROR;
-        }
-    }
-
-    ctx = ngx_http_modsecurity_create_ctx(r, mmcf->modsec, mcf->rules_set, &tid);
-
-    dd("ctx was NULL, creating new context: %p", ctx);
-
-    if (ctx == NULL) {
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
-
-    ctx->log_intervention = 0;
-
-    rc = ngx_http_modsecurity_process_connection(r);
+    rc = ngx_http_modsecurity_process_connection(r, ctx);
     if (rc > 0) {
         ctx->intervention_triggered = 1;
         return rc;
     }
 
-    rc = ngx_http_modsecurity_process_url(r);
+    rc = ngx_http_modsecurity_process_url(r, ctx);
     if (rc > 0) {
         ctx->intervention_triggered = 1;
         return rc;
     }
 
-    rc = ngx_http_modsecurity_process_req_header(r);
+    rc = ngx_http_modsecurity_process_req_header(r, ctx);
 
     if (r->error_page) {
         return NGX_DECLINED;
@@ -117,34 +78,25 @@ ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *r)
         return rc;
     }
 
-    // no request body
-    if (r->headers_in.content_length_n < 0 && !r->headers_in.chunked) {
-        msc_process_request_body(ctx->modsec_transaction);
-        rc = ngx_http_modsecurity_process_intervention(r, ctx, 1);
-        if (rc > 0) {
-            return rc;
-        }
+    rc = ngx_http_modsecurity_process_empty_req_body(r, ctx);
+    if (rc > 0) {
+        return rc;
     }
 
     return NGX_DECLINED;
 }
 
 
-static ngx_int_t
-ngx_http_modsecurity_process_connection(ngx_http_request_t *r)
+ngx_int_t
+ngx_http_modsecurity_process_connection(ngx_http_request_t *r,
+        ngx_http_modsecurity_ctx_t *ctx)
 {
-    in_port_t                    client_port, server_port;
-    ngx_int_t                    rc;
-    ngx_str_t                    client_addr, server_addr;
-    ngx_pool_t                  *old_pool;
-    ngx_connection_t            *c;
-    ngx_http_modsecurity_ctx_t  *ctx;
-    u_char                       addr[NGX_SOCKADDR_STRLEN + 1];
-
-    ctx = ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
-    if (ctx == NULL) {
-        return NGX_ERROR;
-    }
+    in_port_t          client_port, server_port;
+    ngx_int_t          rc;
+    ngx_str_t          client_addr, server_addr;
+    ngx_pool_t        *old_pool;
+    ngx_connection_t  *c;
+    u_char             addr[NGX_SOCKADDR_STRLEN + 1];
 
     c = r->connection;
 
@@ -190,17 +142,12 @@ ngx_http_modsecurity_process_connection(ngx_http_request_t *r)
 }
 
 
-static ngx_int_t
-ngx_http_modsecurity_process_url(ngx_http_request_t *r)
+ngx_int_t
+ngx_http_modsecurity_process_url(ngx_http_request_t *r,
+        ngx_http_modsecurity_ctx_t *ctx)
 {
-    ngx_pool_t                  *old_pool;
-    const char                  *http_version, *n_uri, *n_method;
-    ngx_http_modsecurity_ctx_t  *ctx;
-
-    ctx = ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
-    if (ctx == NULL) {
-        return NGX_ERROR;
-    }
+    ngx_pool_t  *old_pool;
+    const char  *http_version, *n_uri, *n_method;
 
     switch (r->http_version) {
         case NGX_HTTP_VERSION_9 :
@@ -246,19 +193,14 @@ ngx_http_modsecurity_process_url(ngx_http_request_t *r)
 }
 
 
-static ngx_int_t
-ngx_http_modsecurity_process_req_header(ngx_http_request_t *r)
+ngx_int_t
+ngx_http_modsecurity_process_req_header(ngx_http_request_t *r,
+        ngx_http_modsecurity_ctx_t *ctx)
 {
-    ngx_uint_t                   i;
-    ngx_pool_t                  *old_pool;
-    ngx_list_part_t             *part;
-    ngx_table_elt_t             *header;
-    ngx_http_modsecurity_ctx_t  *ctx;
-
-    ctx = ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
-    if (ctx == NULL) {
-        return NGX_ERROR;
-    }
+    ngx_uint_t        i;
+    ngx_pool_t       *old_pool;
+    ngx_list_part_t  *part;
+    ngx_table_elt_t  *header;
 
     part = &r->headers_in.headers.part;
     header = part->elts;
@@ -291,4 +233,17 @@ ngx_http_modsecurity_process_req_header(ngx_http_request_t *r)
     dd("Processing intervention with the request headers information filled in");
 
     return ngx_http_modsecurity_process_intervention(r, ctx, 1);
+}
+
+
+ngx_int_t
+ngx_http_modsecurity_process_empty_req_body(ngx_http_request_t *r,
+        ngx_http_modsecurity_ctx_t *ctx)
+{
+    if (r->headers_in.content_length_n < 0 && !r->headers_in.chunked) {
+        msc_process_request_body(ctx->modsec_transaction);
+        return ngx_http_modsecurity_process_intervention(r, ctx, 1);
+    }
+
+    return NGX_OK;
 }

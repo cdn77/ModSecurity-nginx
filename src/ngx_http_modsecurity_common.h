@@ -99,9 +99,8 @@ extern ngx_module_t ngx_http_modsecurity_module;
 /* ngx_http_modsecurity_module.c */
 ngx_int_t ngx_http_modsecurity_process_intervention(ngx_http_request_t *r,
         ngx_http_modsecurity_ctx_t *ctx, ngx_int_t early_log);
-ngx_http_modsecurity_ctx_t *ngx_http_modsecurity_create_ctx(
-        ngx_http_request_t *r, ModSecurity *modsec, void *rules,
-        ngx_str_t *transaction_id);
+ngx_int_t ngx_http_modsecurity_create_ctx(ngx_http_request_t *r,
+        ngx_http_modsecurity_ctx_t **ctx);
 char *ngx_str_to_char(ngx_str_t a, ngx_pool_t *p);
 #if (NGX_PCRE2)
 #define ngx_http_modsecurity_pcre_malloc_init(x) NULL
@@ -122,7 +121,6 @@ void ngx_http_modsecurity_request_body_filter_init(void);
 
 /* ngx_http_modsecurity_rewrite.c */
 ngx_int_t ngx_http_modsecurity_rewrite_handler(ngx_http_request_t *r);
-ngx_int_t ngx_http_modsecurity_rewrite_handler_internal(ngx_http_request_t *);
 
 
 #endif /* _NGX_HTTP_MODSECURITY_COMMON_H_INCLUDED_ */
