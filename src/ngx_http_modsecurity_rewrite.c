@@ -24,7 +24,8 @@
 ngx_int_t ngx_http_modsecurity_process_connection(ngx_http_request_t *r,
         ngx_http_modsecurity_ctx_t *ctx);
 ngx_int_t ngx_http_modsecurity_process_url(ngx_http_request_t *r,
-        ngx_http_modsecurity_ctx_t *ctx);
+        ngx_http_modsecurity_ctx_t *ctx,
+        const char *uri, const char *method, const char *http_version);
 ngx_int_t ngx_http_modsecurity_process_req_header(ngx_http_request_t *r,
         ngx_http_modsecurity_ctx_t *ctx);
 ngx_int_t ngx_http_modsecurity_process_empty_req_body(ngx_http_request_t *r,
@@ -62,7 +63,7 @@ ngx_http_modsecurity_rewrite_handler(ngx_http_request_t *r)
         return rc;
     }
 
-    rc = ngx_http_modsecurity_process_url(r, ctx);
+    rc = ngx_http_modsecurity_process_url(r, ctx, NULL, NULL, NULL);
     if (rc > 0) {
         ctx->intervention_triggered = 1;
         return rc;
@@ -144,48 +145,55 @@ ngx_http_modsecurity_process_connection(ngx_http_request_t *r,
 
 ngx_int_t
 ngx_http_modsecurity_process_url(ngx_http_request_t *r,
-        ngx_http_modsecurity_ctx_t *ctx)
+        ngx_http_modsecurity_ctx_t *ctx,
+        const char *uri, const char *method, const char *http_version)
 {
     ngx_pool_t  *old_pool;
-    const char  *http_version, *n_uri, *n_method;
 
-    switch (r->http_version) {
-        case NGX_HTTP_VERSION_9 :
-            http_version = "0.9";
-            break;
-        case NGX_HTTP_VERSION_10 :
-            http_version = "1.0";
-            break;
-        case NGX_HTTP_VERSION_11 :
-            http_version = "1.1";
-            break;
-        case NGX_HTTP_VERSION_20 :
-            http_version = "2.0";
-            break;
-        default :
-            http_version = ngx_str_to_char(r->http_protocol, r->pool);
-            if (http_version == (char*)-1) {
-                return NGX_HTTP_INTERNAL_SERVER_ERROR;
-            }
-            if ((http_version != NULL) && (strlen(http_version) > 5) && (!strncmp("HTTP/", http_version, 5))) {
-                http_version += 5;
-            } else {
+    if (http_version == NULL) {
+        switch (r->http_version) {
+            case NGX_HTTP_VERSION_9 :
+                http_version = "0.9";
+                break;
+            case NGX_HTTP_VERSION_10 :
                 http_version = "1.0";
-            }
-            break;
+                break;
+            case NGX_HTTP_VERSION_11 :
+                http_version = "1.1";
+                break;
+            case NGX_HTTP_VERSION_20 :
+                http_version = "2.0";
+                break;
+            default :
+                http_version = ngx_str_to_char(r->http_protocol, r->pool);
+                if (http_version == NULL) {
+                    return NGX_HTTP_INTERNAL_SERVER_ERROR;
+                }
+                if ((strlen(http_version) > 5) && (!strncmp("HTTP/", http_version, 5))) {
+                    http_version += 5;
+                } else {
+                    http_version = "1.0";
+                }
+                break;
+        }
     }
 
-    n_uri = ngx_str_to_char(r->unparsed_uri, r->pool);
-    n_method = ngx_str_to_char(r->method_name, r->pool);
-    if (n_uri == (char*)-1 || n_method == (char*)-1) {
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    if (uri == NULL) {
+        uri = ngx_str_to_char(r->unparsed_uri, r->pool);
+        if (uri == NULL) {
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
     }
-    if (n_uri == NULL) {
-        dd("uri is of length zero");
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+
+    if (method == NULL) {
+        method = ngx_str_to_char(r->method_name, r->pool);
+        if (method == NULL) {
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
     }
+
     old_pool = ngx_http_modsecurity_pcre_malloc_init(r->pool);
-    msc_process_uri(ctx->modsec_transaction, n_uri, n_method, http_version);
+    msc_process_uri(ctx->modsec_transaction, uri, method, http_version);
     ngx_http_modsecurity_pcre_malloc_done(old_pool);
 
     dd("Processing intervention with the transaction information filled in (uri, method and version)");

@@ -132,17 +132,14 @@ char *ngx_str_to_char(ngx_str_t a, ngx_pool_t *p)
 {
     char *str = NULL;
 
-    if (a.len == 0) {
+    str = ngx_pnalloc(p, a.len+1);
+    if (str == NULL) {
         return NULL;
     }
 
-    str = ngx_pnalloc(p, a.len+1);
-    if (str == NULL) {
-        dd("failed to allocate memory to convert space ngx_string to C string");
-        /* We already returned NULL for an empty string, so return -1 here to indicate allocation error */
-        return (char *)-1;
+    if (a.len > 0) {
+        ngx_memcpy(str, a.data, a.len);
     }
-    ngx_memcpy(str, a.data, a.len);
     str[a.len] = '\0';
 
     return str;
