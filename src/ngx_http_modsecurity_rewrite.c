@@ -22,7 +22,8 @@
 
 
 ngx_int_t ngx_http_modsecurity_process_connection(ngx_http_request_t *r,
-        ngx_http_modsecurity_ctx_t *ctx);
+        ngx_http_modsecurity_ctx_t *ctx,
+        const char *client_addr, in_port_t client_port);
 ngx_int_t ngx_http_modsecurity_process_url(ngx_http_request_t *r,
         ngx_http_modsecurity_ctx_t *ctx,
         const char *uri, const char *method, const char *http_version);
@@ -57,7 +58,7 @@ ngx_http_modsecurity_rewrite_handler(ngx_http_request_t *r)
         return rc;
     }
 
-    rc = ngx_http_modsecurity_process_connection(r, ctx);
+    rc = ngx_http_modsecurity_process_connection(r, ctx, NULL, 0);
     if (rc > 0) {
         ctx->intervention_triggered = 1;
         return rc;
@@ -90,24 +91,21 @@ ngx_http_modsecurity_rewrite_handler(ngx_http_request_t *r)
 
 ngx_int_t
 ngx_http_modsecurity_process_connection(ngx_http_request_t *r,
-        ngx_http_modsecurity_ctx_t *ctx)
+        ngx_http_modsecurity_ctx_t *ctx,
+        const char *client_addr, in_port_t client_port)
 {
-    in_port_t          client_port, server_port;
+    in_port_t          server_port;
     ngx_int_t          rc;
-    ngx_str_t          client_addr, server_addr;
+    ngx_str_t          server_addr;
     ngx_pool_t        *old_pool;
     ngx_connection_t  *c;
     u_char             addr[NGX_SOCKADDR_STRLEN + 1];
 
     c = r->connection;
 
-    client_addr = c->addr_text;
-    client_port = ngx_inet_get_port(c->sockaddr);
-
-    if (client_addr.len < c->listening->addr_text_max_len) {
-        client_addr.data[client_addr.len] = 0;
-    } else {
-        client_addr.data = (u_char *)ngx_str_to_char(client_addr, r->pool);
+    if (client_addr == NULL) {
+        client_addr = ngx_str_to_char(c->addr_text, r->pool);
+        client_port = ngx_inet_get_port(c->sockaddr);
     }
 
     // fill c->local_sockaddr
@@ -123,7 +121,7 @@ ngx_http_modsecurity_process_connection(ngx_http_request_t *r,
 
     old_pool = ngx_http_modsecurity_pcre_malloc_init(r->pool);
     rc = msc_process_connection(ctx->modsec_transaction,
-                                (char *)client_addr.data, client_port,
+                                client_addr, client_port,
                                 (char *)server_addr.data, server_port);
     ngx_http_modsecurity_pcre_malloc_done(old_pool);
     if (rc != 1){
