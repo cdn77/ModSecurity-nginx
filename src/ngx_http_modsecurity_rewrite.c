@@ -23,7 +23,8 @@
 
 ngx_int_t ngx_http_modsecurity_process_connection(ngx_http_request_t *r,
         ngx_http_modsecurity_ctx_t *ctx,
-        const char *client_addr, in_port_t client_port);
+        const char *client_addr, in_port_t client_port,
+        const char *server_addr, in_port_t server_port);
 ngx_int_t ngx_http_modsecurity_process_url(ngx_http_request_t *r,
         ngx_http_modsecurity_ctx_t *ctx,
         const char *uri, const char *method, const char *http_version);
@@ -58,7 +59,7 @@ ngx_http_modsecurity_rewrite_handler(ngx_http_request_t *r)
         return rc;
     }
 
-    rc = ngx_http_modsecurity_process_connection(r, ctx, NULL, 0);
+    rc = ngx_http_modsecurity_process_connection(r, ctx, NULL, 0, NULL, 0);
     if (rc > 0) {
         ctx->intervention_triggered = 1;
         return rc;
@@ -92,11 +93,11 @@ ngx_http_modsecurity_rewrite_handler(ngx_http_request_t *r)
 ngx_int_t
 ngx_http_modsecurity_process_connection(ngx_http_request_t *r,
         ngx_http_modsecurity_ctx_t *ctx,
-        const char *client_addr, in_port_t client_port)
+        const char *client_addr, in_port_t client_port,
+        const char *server_addr, in_port_t server_port)
 {
-    in_port_t          server_port;
+    size_t             len;
     ngx_int_t          rc;
-    ngx_str_t          server_addr;
     ngx_pool_t        *old_pool;
     ngx_connection_t  *c;
     u_char             addr[NGX_SOCKADDR_STRLEN + 1];
@@ -108,21 +109,21 @@ ngx_http_modsecurity_process_connection(ngx_http_request_t *r,
         client_port = ngx_inet_get_port(c->sockaddr);
     }
 
-    // fill c->local_sockaddr
-    ngx_connection_local_sockaddr(c, NULL, 0);
+    if (server_addr == NULL) {
+        // fill c->local_sockaddr
+        ngx_connection_local_sockaddr(c, NULL, 0);
 
-    server_addr.data = addr;
-    server_addr.len = NGX_SOCKADDR_STRLEN;
-
-    server_addr.len = ngx_sock_ntop(c->local_sockaddr, c->local_socklen,
-                                    server_addr.data, server_addr.len, 0);
-    server_addr.data[server_addr.len] = 0;
-    server_port = ngx_inet_get_port(c->local_sockaddr);
+        len = ngx_sock_ntop(c->local_sockaddr, c->local_socklen,
+                            addr, NGX_SOCKADDR_STRLEN, 0);
+        addr[len] = 0;
+        server_addr = (char *)addr;
+        server_port = ngx_inet_get_port(c->local_sockaddr);
+    }
 
     old_pool = ngx_http_modsecurity_pcre_malloc_init(r->pool);
     rc = msc_process_connection(ctx->modsec_transaction,
                                 client_addr, client_port,
-                                (char *)server_addr.data, server_port);
+                                server_addr, server_port);
     ngx_http_modsecurity_pcre_malloc_done(old_pool);
     if (rc != 1){
         dd("Was not able to extract connection information.");
