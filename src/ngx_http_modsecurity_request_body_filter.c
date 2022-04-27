@@ -18,7 +18,7 @@
 #endif
 #include "ddebug.h"
 
-#include "ngx_http_modsecurity_common.h"
+#include "ngx_http_modsecurity.h"
 
 
 static ngx_int_t ngx_http_modsecurity_request_body_filter(

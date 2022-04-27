@@ -18,7 +18,7 @@
 #endif
 #include "ddebug.h"
 
-#include "ngx_http_modsecurity_common.h"
+#include "ngx_http_modsecurity.h"
 
 
 void

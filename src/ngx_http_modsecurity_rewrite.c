@@ -18,7 +18,7 @@
 #endif
 #include "ddebug.h"
 
-#include "ngx_http_modsecurity_common.h"
+#include "ngx_http_modsecurity.h"
 
 
 ngx_int_t ngx_http_modsecurity_process_connection(ngx_http_request_t *r,
