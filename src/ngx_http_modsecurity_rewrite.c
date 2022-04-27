@@ -247,7 +247,7 @@ ngx_int_t
 ngx_http_modsecurity_process_empty_req_body(ngx_http_request_t *r,
         ngx_http_modsecurity_ctx_t *ctx)
 {
-    if (r->headers_in.content_length_n < 0 && !r->headers_in.chunked) {
+    if (r->headers_in.content_length_n <= 0 && !r->headers_in.chunked) {
         msc_process_request_body(ctx->modsec_transaction);
         return ngx_http_modsecurity_process_intervention(r, ctx, 1);
     }
