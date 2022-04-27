@@ -31,24 +31,26 @@
 
 
 typedef struct {
-    Transaction               *modsec_transaction;
+    Transaction                    *modsec_transaction;
 
-    unsigned                   logged:1;
-    unsigned                   intervention_triggered:1;
-    unsigned                   log_intervention:1;
+    unsigned                        logged:1;
+    unsigned                        intervention_triggered:1;
+    unsigned                        log_intervention:1;
 } ngx_http_modsecurity_ctx_t;
 
 
 typedef struct {
-    ModSecurity               *modsec;
-} ngx_http_modsecurity_main_conf_t;
+    ModSecurity                     *modsec;
+    ngx_str_t                       *server_name;
+} ngx_http_modsecurity_server_t;
 
 
 typedef struct {
+    ngx_http_modsecurity_server_t    server;
     /* RulesSet or Rules */
-    void                      *rules_set;
-    ngx_flag_t                 enable;
-    ngx_http_complex_value_t  *transaction_id;
+    void                            *rules_set;
+    ngx_flag_t                       enable;
+    ngx_http_complex_value_t        *transaction_id;
 } ngx_http_modsecurity_conf_t;
 
 
