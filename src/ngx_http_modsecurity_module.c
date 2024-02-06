@@ -25,6 +25,29 @@
 #include <ngx_http.h>
 
 
+static ngx_int_t ngx_http_modsecurity_init(ngx_conf_t *cf);
+static void *ngx_http_modsecurity_create_conf(ngx_conf_t *cf);
+static char *ngx_http_modsecurity_merge_conf(ngx_conf_t *cf, void *parent,
+    void *child);
+static void ngx_http_modsecurity_cleanup_instance(void *data);
+static void ngx_http_modsecurity_cleanup_rules(void *data);
+
+#if (NGX_PCRE2)
+
+#define WITH_SAFE_PCRE_FREE(h)  {                                              \
+    h                                                                          \
+}
+
+#define ngx_http_modsecurity_pcre_malloc_init(x) NULL
+#define ngx_http_modsecurity_pcre_malloc_done(x) (void)x
+
+#else
+
+/*
+ * PCRE malloc/free workaround, based on
+ * https://github.com/openresty/lua-nginx-module/blob/master/src/ngx_http_lua_pcrefix.c
+ */
+
 #define WITH_SAFE_PCRE_FREE(h)  {                                              \
     void  (*old_free)(void *ptr);                                              \
                                                                                \
@@ -35,20 +58,6 @@
 }
 
 
-static ngx_int_t ngx_http_modsecurity_init(ngx_conf_t *cf);
-static void *ngx_http_modsecurity_create_conf(ngx_conf_t *cf);
-static char *ngx_http_modsecurity_merge_conf(ngx_conf_t *cf, void *parent,
-    void *child);
-static void ngx_http_modsecurity_cleanup_instance(void *data);
-static void ngx_http_modsecurity_cleanup_rules(void *data);
-
-
-/*
- * PCRE malloc/free workaround, based on
- * https://github.com/openresty/lua-nginx-module/blob/master/src/ngx_http_lua_pcrefix.c
- */
-
-#if !(NGX_PCRE2)
 static void *(*old_pcre_malloc)(size_t);
 static void (*old_pcre_free)(void *ptr);
 static ngx_pool_t *ngx_http_modsec_pcre_pool = NULL;
