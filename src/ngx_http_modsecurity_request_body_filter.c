@@ -45,7 +45,7 @@ ngx_http_modsecurity_request_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
     ngx_http_modsecurity_ctx_t  *ctx;
 
     if (r != r->main || r->internal) {
-        return NGX_DECLINED;
+        return NGX_OK;
     }
 
     ctx = ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
@@ -74,6 +74,10 @@ ngx_http_modsecurity_request_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
          *
          */
         rcms = ngx_http_modsecurity_process_intervention(r, ctx, 0);
+        if (rcms == NGX_ERROR) {
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
+
         if (rcms > 0) {
             return rcms;
         }
@@ -87,6 +91,10 @@ ngx_http_modsecurity_request_body_filter(ngx_http_request_t *r, ngx_chain_t *in)
         ngx_http_modsecurity_pcre_malloc_done(old_pool);
 
         rcms = ngx_http_modsecurity_process_intervention(r, ctx, 0);
+        if (rcms == NGX_ERROR) {
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
+
         if (rcms > 0) {
             return rcms;
         }
